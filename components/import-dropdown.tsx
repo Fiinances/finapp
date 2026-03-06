@@ -21,7 +21,6 @@ import { Input } from "@/components/ui/input"
 import Papa from "papaparse"
 import { parse as parseOfx } from "ofx-js"
 import { toast } from "sonner"
-import { generate } from "@/lib/llm-client"
 import type { Account, CreditCard, Transaction } from "@/app/types/electron"
 
 type ImportKind = "pdf" | "ofx" | "csv" | null
@@ -36,7 +35,7 @@ function findCol(headers: string[], ...candidates: string[]): string | undefined
 function mapCsvToTransactions(rows: Record<string, unknown>[]): Transaction[] {
     const headers = Object.keys(rows[0] ?? {})
     const dateCol = findCol(headers, "data", "date", "dt")
-    const descCol = findCol(headers, "descri", "historico", "lancamento", "lançamento", "memo", "payee", "name")
+    const descCol = findCol(headers, "descri", "historico", "title", "lancamento", "lançamento", "memo", "payee", "name")
     const amountCol = findCol(headers, "valor", "amount", "value", "montante")
 
     return rows.flatMap(row => {
@@ -100,11 +99,11 @@ export default function ImportDropdown({ defaultAccountId, defaultCreditCardId, 
     const [loading, setLoading] = React.useState(false)
     const [saving, setSaving] = React.useState(false)
     const [error, setError] = React.useState<string | null>(null)
-    const [csvRows, setCsvRows] = React.useState<Record<string, unknown>[]>([])
     const [previewTransactions, setPreviewTransactions] = React.useState<Transaction[]>([])
     const [accounts, setAccounts] = React.useState<Account[]>([])
     const [creditCards, setCreditCards] = React.useState<CreditCard[]>([])
     const [accountId, setAccountId] = React.useState<string>("")
+    const [billingMonth, setBillingMonth] = React.useState<string>("")
 
     async function loadAccounts() {
         try {
@@ -116,6 +115,7 @@ export default function ImportDropdown({ defaultAccountId, defaultCreditCardId, 
             const cardList = cards ?? []
             setAccounts(accList)
             setCreditCards(cardList)
+            setBillingMonth(currentMonthYear())
             if (defaultCreditCardId) {
                 const pref = cardList.find(c => c.id === defaultCreditCardId)
                 if (pref) { setAccountId(`c:${pref.id}`); return }
@@ -129,14 +129,19 @@ export default function ImportDropdown({ defaultAccountId, defaultCreditCardId, 
         } catch { /* outside electron */ }
     }
 
+    function currentMonthYear(): string {
+        const now = new Date()
+        return `${String(now.getMonth() + 1).padStart(2, "0")}/${now.getFullYear()}`
+    }
+
     function resetSheet() {
         setStep("upload")
         setFileName(null)
         setFile(null)
         setError(null)
-        setCsvRows([])
         setPreviewTransactions([])
         setAccountId("")
+        setBillingMonth(currentMonthYear())
     }
 
     function openFor(k: ImportKind) {
@@ -160,7 +165,6 @@ export default function ImportDropdown({ defaultAccountId, defaultCreditCardId, 
         })
         if (result.errors.length > 0) console.warn("Papa.parse warnings", result.errors)
         if (result.data.length === 0) throw new Error("CSV vazio ou sem linhas de dados.")
-        setCsvRows(result.data)
         setPreviewTransactions(mapCsvToTransactions(result.data))
         await loadAccounts()
         setStep("preview")
@@ -218,12 +222,18 @@ export default function ImportDropdown({ defaultAccountId, defaultCreditCardId, 
             toast.error("Não foi possível mapear os dados do CSV. Verifique se o arquivo possui colunas de data, descrição e valor.")
             return
         }
-        const [kind, rawId] = accountId.split(":")
+        const [dest, rawId] = accountId.split(":")
         const destId = parseInt(rawId, 10)
+        const isCreditCard = dest === "c"
+        if (isCreditCard && !billingMonth.match(/^\d{2}\/\d{4}$/)) {
+            toast.error("Informe o mês da fatura no formato MM/AAAA")
+            return
+        }
         const transactions = previewTransactions.map(t => ({
             ...t,
-            account_id: kind === "a" ? destId : null,
-            credit_card_id: kind === "c" ? destId : null,
+            account_id: dest === "a" ? destId : null,
+            credit_card_id: dest === "c" ? destId : null,
+            ...(isCreditCard ? { billing_month: billingMonth } : {}),
         }))
         setSaving(true)
         try {
@@ -319,27 +329,65 @@ export default function ImportDropdown({ defaultAccountId, defaultCreditCardId, 
                         </form>
                     ) : (
                         <div className="flex flex-col gap-4 p-4">
-                            {/* Account selector */}
-                            <div className="flex flex-col gap-1.5">
-                                <label className="text-sm font-medium">Conta bancária de destino</label>
-                                {accounts.length === 0 ? (
-                                    <p className="text-sm text-destructive">
-                                        Nenhuma conta cadastrada. Crie uma conta em <strong>Bancos</strong> antes de importar.
-                                    </p>
-                                ) : (
-                                    <select
-                                        value={accountId}
-                                        onChange={(e) => setAccountId(e.target.value)}
+                            {/* Destination selector — hidden when context already provides the target */}
+                            {!defaultCreditCardId && !defaultAccountId && (
+                                <div className="flex flex-col gap-1.5">
+                                    <label className="text-sm font-medium">Conta bancária de destino</label>
+                                    {accounts.length === 0 && creditCards.length === 0 ? (
+                                        <p className="text-sm text-destructive">
+                                            Nenhuma conta cadastrada. Crie uma conta em <strong>Bancos</strong> antes de importar.
+                                        </p>
+                                    ) : (
+                                        <select
+                                            value={accountId}
+                                            onChange={(e) => setAccountId(e.target.value)}
+                                            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                                        >
+                                            {accounts.length > 0 && (
+                                                <optgroup label="Contas bancárias">
+                                                    {accounts.map((acc) => (
+                                                        <option key={acc.id} value={`a:${acc.id}`}>
+                                                            {acc.name}{acc.bank ? ` — ${acc.bank}` : ""}
+                                                        </option>
+                                                    ))}
+                                                </optgroup>
+                                            )}
+                                            {creditCards.length > 0 && (
+                                                <optgroup label="Cartões de crédito">
+                                                    {creditCards.map((card) => (
+                                                        <option key={card.id} value={`c:${card.id}`}>
+                                                            {card.name}
+                                                        </option>
+                                                    ))}
+                                                </optgroup>
+                                            )}
+                                        </select>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Billing month — only for credit cards */}
+                            {accountId.startsWith("c:") && (
+                                <div className="flex flex-col gap-1.5">
+                                    <label className="text-sm font-medium">
+                                        Mês da fatura <span className="text-destructive">*</span>
+                                        <span className="text-muted-foreground font-normal ml-1">(MM/AAAA)</span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        inputMode="numeric"
+                                        placeholder="Ex: 01/2025"
+                                        value={billingMonth}
+                                        maxLength={7}
+                                        onChange={(e) => {
+                                            let v = e.target.value.replace(/[^\d/]/g, "")
+                                            if (v.length === 2 && !v.includes("/")) v += "/"
+                                            setBillingMonth(v)
+                                        }}
                                         className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                                    >
-                                        {accounts.map((acc) => (
-                                            <option key={acc.id} value={acc.id}>
-                                                {acc.name}{acc.bank ? ` — ${acc.bank}` : ""}
-                                            </option>
-                                        ))}
-                                    </select>
-                                )}
-                            </div>
+                                    />
+                                </div>
+                            )}
 
                             {/* Editable transactions table */}
                             <div className="rounded-md border overflow-auto max-h-[52vh]">

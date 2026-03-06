@@ -93,12 +93,19 @@ function registerDbHandlers() {
 
     ipcMain.handle('db:creditCards:deleteByMonth', async (_, creditCardId, monthYear) => {
         // monthYear = 'MM/YYYY'
+        // Match by explicit billing_month (new imports) or fall back to date (legacy)
         return getKnex()('transactions')
             .where('credit_card_id', creditCardId)
-            .whereRaw(
-                "(strftime('%m/%Y', date) = ? OR SUBSTR(date, 4, 7) = ?)",
-                [monthYear, monthYear]
-            )
+            .where(function () {
+                this.where('billing_month', monthYear)
+                    .orWhere(function () {
+                        this.whereNull('billing_month')
+                            .whereRaw(
+                                "(strftime('%m/%Y', date) = ? OR SUBSTR(date, 4, 7) = ?)",
+                                [monthYear, monthYear]
+                            )
+                    })
+            })
             .delete()
     })
 }

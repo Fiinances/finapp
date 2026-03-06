@@ -66,6 +66,7 @@ async function migrate() {
             t.string('category')
             t.enu('source', ['manual', 'csv', 'ofx']).defaultTo('manual')
             t.string('external_id') // OFX FITID — evita duplicatas
+            t.string('billing_month').nullable() // MM/YYYY — mes de fatura do cartao
             t.timestamps(true, true)
         })
     }

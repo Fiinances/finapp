@@ -9,6 +9,7 @@ export interface Transaction {
   category?: string
   source?: 'manual' | 'csv' | 'ofx'
   external_id?: string
+  billing_month?: string | null
   created_at?: string
   updated_at?: string
 }

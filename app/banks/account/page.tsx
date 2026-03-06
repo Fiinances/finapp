@@ -108,7 +108,7 @@ export default function AccountDetailPage() {
         <div className="flex flex-col gap-4">
             {/* Header */}
             <div className="flex items-center gap-3">
-                <Button variant="ghost" size="icon" onClick={() => router.back()}>
+                <Button variant="secondary" size="icon" onClick={() => router.back()}>
                     <ArrowLeftIcon className="size-4" />
                 </Button>
                 {account && (

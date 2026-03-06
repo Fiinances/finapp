@@ -34,16 +34,22 @@ function parseYearMonth(date: string): string {
 function buildSummaries(transactions: Transaction[]): MonthSummary[] {
     const map = new Map<string, MonthSummary>()
     for (const t of transactions) {
-        const ym = parseYearMonth(t.date)
-        if (!map.has(ym)) {
+        let key: string
+        let label: string
+        if (t.billing_month) {
+            key = t.billing_month // already MM/YYYY
+            const [mm, yyyy] = t.billing_month.split("/")
+            label = `${MONTH_NAMES[parseInt(mm) - 1]} ${yyyy}`
+        } else {
+            const ym = parseYearMonth(t.date)
             const [year, month] = ym.split("-")
-            map.set(ym, {
-                monthYear: `${month}/${year}`,
-                label: `${MONTH_NAMES[parseInt(month) - 1]} ${year}`,
-                count: 0, income: 0, expense: 0, total: 0,
-            })
+            key = `${month}/${year}`
+            label = `${MONTH_NAMES[parseInt(month) - 1]} ${year}`
         }
-        const entry = map.get(ym)!
+        if (!map.has(key)) {
+            map.set(key, { monthYear: key, label, count: 0, income: 0, expense: 0, total: 0 })
+        }
+        const entry = map.get(key)!
         entry.count++
         if (t.type === "income") entry.income += t.amount
         else entry.expense += t.amount
