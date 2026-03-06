@@ -11,6 +11,7 @@ function registerDbHandlers() {
         let query = db('transactions').orderBy('date', 'desc')
         if (filters.type) query = query.where('type', filters.type)
         if (filters.accountId) query = query.where('account_id', filters.accountId)
+        if (filters.creditCardId) query = query.where('credit_card_id', filters.creditCardId)
         if (filters.source) query = query.where('source', filters.source)
         return query
     })
@@ -69,6 +70,36 @@ function registerDbHandlers() {
 
     ipcMain.handle('db:accounts:delete', async (_, id) => {
         return getKnex()('accounts').where('id', id).delete()
+    })
+
+    // ── Credit Cards ──────────────────────────────────────────────
+
+    ipcMain.handle('db:creditCards:list', async () => {
+        return getKnex()('credit_cards').orderBy('name')
+    })
+
+    ipcMain.handle('db:creditCards:insert', async (_, card) => {
+        const [id] = await getKnex()('credit_cards').insert(card)
+        return id
+    })
+
+    ipcMain.handle('db:creditCards:update', async (_, id, data) => {
+        return getKnex()('credit_cards').where('id', id).update(data)
+    })
+
+    ipcMain.handle('db:creditCards:delete', async (_, id) => {
+        return getKnex()('credit_cards').where('id', id).delete()
+    })
+
+    ipcMain.handle('db:creditCards:deleteByMonth', async (_, creditCardId, monthYear) => {
+        // monthYear = 'MM/YYYY'
+        return getKnex()('transactions')
+            .where('credit_card_id', creditCardId)
+            .whereRaw(
+                "(strftime('%m/%Y', date) = ? OR SUBSTR(date, 4, 7) = ?)",
+                [monthYear, monthYear]
+            )
+            .delete()
     })
 }
 

@@ -48,11 +48,6 @@ export function EditBankSheet({ account, open, onOpenChange, onSuccess }: EditBa
         })
     }
 
-    function handleBalanceChange(e: React.ChangeEvent<HTMLInputElement>) {
-        const digits = e.target.value.replace(/\D/g, "")
-        setBalanceDigits(digits)
-    }
-
     async function onSubmit(e: React.FormEvent) {
         e.preventDefault()
         if (!name.trim() || !account?.id) return
@@ -81,7 +76,7 @@ export function EditBankSheet({ account, open, onOpenChange, onSuccess }: EditBa
                 <SheetHeader>
                     <SheetTitle>Editar conta bancária</SheetTitle>
                     <SheetDescription>
-                        Altere os dados da conta e salve para atualizar.
+                        Altere os dados e salve para atualizar.
                     </SheetDescription>
                 </SheetHeader>
 
@@ -90,7 +85,7 @@ export function EditBankSheet({ account, open, onOpenChange, onSuccess }: EditBa
                         <Label htmlFor="edit-name">Nome da conta</Label>
                         <Input
                             id="edit-name"
-                            placeholder="Ex: Conta corrente, Poupança…"
+                            placeholder="Ex: Conta corrente…"
                             value={name}
                             onChange={(e) => setName(e.target.value)}
                             required
@@ -98,7 +93,7 @@ export function EditBankSheet({ account, open, onOpenChange, onSuccess }: EditBa
                     </div>
 
                     <div className="flex flex-col gap-1.5">
-                        <Label htmlFor="edit-bank">Banco</Label>
+                        <Label htmlFor="edit-bank">Banco / Emissor</Label>
                         <Input
                             id="edit-bank"
                             placeholder="Ex: Nubank, Itaú, Bradesco…"
@@ -108,7 +103,7 @@ export function EditBankSheet({ account, open, onOpenChange, onSuccess }: EditBa
                     </div>
 
                     <div className="flex flex-col gap-1.5">
-                        <Label htmlFor="edit-color">Cor da conta</Label>
+                        <Label htmlFor="edit-color">Cor</Label>
                         <div className="flex items-center gap-3">
                             <input
                                 id="edit-color"
@@ -129,7 +124,7 @@ export function EditBankSheet({ account, open, onOpenChange, onSuccess }: EditBa
                             inputMode="numeric"
                             placeholder="R$ 0,00"
                             value={balanceDigits ? formatCurrency(balanceDigits) : ""}
-                            onChange={handleBalanceChange}
+                            onChange={(e) => setBalanceDigits(e.target.value.replace(/\D/g, ""))}
                         />
                     </div>
 

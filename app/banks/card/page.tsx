@@ -5,9 +5,10 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { ArrowLeftIcon, Trash2Icon } from "lucide-react"
+import { ArrowLeftIcon, CreditCardIcon, Trash2Icon } from "lucide-react"
 import ImportDropdown from "@/components/import-dropdown"
-import type { Account, Transaction } from "@/app/types/electron"
+import type { Account, CreditCard, Transaction } from "@/app/types/electron"
+import { EditCreditCardSheet } from "../components/edit-credit-card-sheet"
 
 interface MonthSummary {
     monthYear: string   // 'MM/YYYY'
@@ -55,26 +56,33 @@ function fmt(value: number) {
     return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
 }
 
-export default function AccountDetailPage() {
+export default function CardDetailPage() {
     const router = useRouter()
     const searchParams = useSearchParams()
-    const accountId = parseInt(searchParams.get("id") ?? "0", 10)
+    const cardId = parseInt(searchParams.get("id") ?? "0", 10)
 
-    const [account, setAccount] = React.useState<Account | null>(null)
+    const [card, setCard] = React.useState<CreditCard | null>(null)
+    const [linkedAccount, setLinkedAccount] = React.useState<Account | null>(null)
     const [summaries, setSummaries] = React.useState<MonthSummary[]>([])
     const [loading, setLoading] = React.useState(true)
     const [deletingMonth, setDeletingMonth] = React.useState<string | null>(null)
+    const [editOpen, setEditOpen] = React.useState(false)
 
     async function load() {
-        if (!accountId) return
+        if (!cardId) return
         setLoading(true)
         try {
-            const [accounts, transactions] = await Promise.all([
+            const [cards, accounts, transactions] = await Promise.all([
+                window.electronAPI?.db.creditCards.list() ?? [],
                 window.electronAPI?.db.accounts.list() ?? [],
-                window.electronAPI?.db.transactions.list({ accountId }) ?? [],
+                window.electronAPI?.db.transactions.list({ creditCardId: cardId }) ?? [],
             ])
-            const found = (accounts ?? []).find((a) => a.id === accountId) ?? null
-            setAccount(found)
+            const found = (cards ?? []).find(c => c.id === cardId) ?? null
+            setCard(found)
+            if (found) {
+                const acc = (accounts ?? []).find(a => a.id === found.account_id) ?? null
+                setLinkedAccount(acc)
+            }
             setSummaries(buildSummaries(transactions ?? []))
         } catch {
             // outside electron
@@ -83,14 +91,13 @@ export default function AccountDetailPage() {
         }
     }
 
-    React.useEffect(() => { load() }, [accountId])
+    React.useEffect(() => { load() }, [cardId])
 
     async function handleDeleteMonth(monthYear: string, label: string) {
-        if (!accountId) return
+        if (!cardId) return
         setDeletingMonth(monthYear)
         try {
-            console.log("Deleting transactions for month", monthYear, "account", accountId)
-            await window.electronAPI?.db.transactions.deleteByMonth(accountId, monthYear)
+            await window.electronAPI?.db.creditCards.deleteByMonth(cardId, monthYear)
             toast.success(`Transações de ${label} excluídas`, { position: "top-center" })
             await load()
         } catch (err) {
@@ -111,19 +118,64 @@ export default function AccountDetailPage() {
                 <Button variant="ghost" size="icon" onClick={() => router.back()}>
                     <ArrowLeftIcon className="size-4" />
                 </Button>
-                {account && (
+                {card && (
                     <div className="flex items-center gap-2 flex-1">
-                        <span className="size-4 rounded-full shrink-0" style={{ backgroundColor: account.color ?? "#6366f1" }} />
+                        <CreditCardIcon className="size-5 shrink-0" style={{ color: card.color ?? "#6366f1" }} />
                         <div className="flex-1">
-                            <h1 className="text-lg font-semibold leading-none">{account.name}</h1>
-                            {account.bank && (
-                                <p className="text-sm text-muted-foreground">{account.bank}</p>
+                            <h1 className="text-lg font-semibold leading-none">{card.name}</h1>
+                            {linkedAccount && (
+                                <p className="text-sm text-muted-foreground">
+                                    {linkedAccount.name}{linkedAccount.bank ? ` — ${linkedAccount.bank}` : ""}
+                                </p>
                             )}
                         </div>
-                        <ImportDropdown defaultAccountId={account.id} onSuccess={load} />
+                        <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
+                            Editar
+                        </Button>
+                        <ImportDropdown defaultCreditCardId={card.id} onSuccess={load} />
                     </div>
                 )}
             </div>
+
+            {/* Card info */}
+            {!loading && card && (
+                <Card>
+                    <CardContent className="pt-4">
+                        <div className="grid gap-4 sm:grid-cols-3">
+                            <div>
+                                <p className="text-xs text-muted-foreground mb-0.5">Limite</p>
+                                <p className="text-lg font-semibold">
+                                    {card.credit_limit
+                                        ? card.credit_limit.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+                                        : "—"}
+                                </p>
+                            </div>
+                            <div>
+                                <p className="text-xs text-muted-foreground mb-0.5">Dia de fechamento</p>
+                                <p className="text-lg font-semibold">{card.closing_day ?? "—"}</p>
+                            </div>
+                            <div>
+                                <p className="text-xs text-muted-foreground mb-0.5">Dia de vencimento</p>
+                                <p className="text-lg font-semibold">{card.due_day ?? "—"}</p>
+                            </div>
+                            {linkedAccount && (
+                                <div className="sm:col-span-3 pt-1 border-t">
+                                    <p className="text-xs text-muted-foreground mb-0.5">Conta bancária vinculada</p>
+                                    <button
+                                        type="button"
+                                        onClick={() => router.push(`/banks/account?id=${linkedAccount.id}`)}
+                                        className="flex items-center gap-1.5 text-sm font-medium hover:underline"
+                                    >
+                                        <span className="size-2.5 rounded-full shrink-0" style={{ backgroundColor: linkedAccount.color ?? "#6366f1" }} />
+                                        {linkedAccount.name}
+                                        {linkedAccount.bank && <span className="text-muted-foreground font-normal">— {linkedAccount.bank}</span>}
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
 
             {/* Summary cards */}
             {!loading && summaries.length > 0 && (
@@ -149,18 +201,18 @@ export default function AccountDetailPage() {
                 </div>
             )}
 
-            {/* Main table */}
+            {/* Faturas table */}
             <Card>
                 <CardHeader>
-                    <CardTitle>Importações por mês</CardTitle>
-                    <CardDescription>Resumo das transações agrupadas por mês.</CardDescription>
+                    <CardTitle>Faturas</CardTitle>
+                    <CardDescription>Histórico de faturas agrupadas por mês.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     {loading ? (
                         <p className="text-sm text-muted-foreground py-8 text-center">Carregando…</p>
                     ) : summaries.length === 0 ? (
                         <p className="text-sm text-muted-foreground py-8 text-center">
-                            Nenhuma transação importada para esta conta.
+                            Nenhuma transação importada para este cartão.
                         </p>
                     ) : (
                         <div className="rounded-md border overflow-auto">
@@ -217,6 +269,13 @@ export default function AccountDetailPage() {
                     )}
                 </CardContent>
             </Card>
+
+            <EditCreditCardSheet
+                card={card}
+                open={editOpen}
+                onOpenChange={setEditOpen}
+                onSuccess={load}
+            />
         </div>
     )
 }

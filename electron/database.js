@@ -39,11 +39,26 @@ async function migrate() {
         })
     }
 
+    const hasCreditCards = await db.schema.hasTable('credit_cards')
+    if (!hasCreditCards) {
+        await db.schema.createTable('credit_cards', (t) => {
+            t.increments('id').primary()
+            t.integer('account_id').references('id').inTable('accounts').onDelete('CASCADE').notNullable()
+            t.string('name').notNullable()
+            t.string('color')
+            t.decimal('credit_limit', 15, 2).nullable()
+            t.integer('closing_day').nullable()
+            t.integer('due_day').nullable()
+            t.timestamps(true, true)
+        })
+    }
+
     const hasTransactions = await db.schema.hasTable('transactions')
     if (!hasTransactions) {
         await db.schema.createTable('transactions', (t) => {
             t.increments('id').primary()
-            t.integer('account_id').references('id').inTable('accounts').onDelete('SET NULL')
+            t.integer('account_id').references('id').inTable('accounts').onDelete('SET NULL').nullable()
+            t.integer('credit_card_id').references('id').inTable('credit_cards').onDelete('SET NULL').nullable()
             t.date('date').notNullable()
             t.string('description').notNullable()
             t.decimal('amount', 15, 2).notNullable()

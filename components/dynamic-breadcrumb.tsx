@@ -14,6 +14,7 @@ const LABELS: Record<string, string> = {
     dashboard: "Dashboard",
     banks: "Bancos",
     account: "Conta",
+    card: "Cartão",
     "import-pdf": "Importar PDF",
 }
 

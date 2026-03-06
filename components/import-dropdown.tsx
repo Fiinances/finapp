@@ -22,7 +22,7 @@ import Papa from "papaparse"
 import { parse as parseOfx } from "ofx-js"
 import { toast } from "sonner"
 import { generate } from "@/lib/llm-client"
-import type { Account, Transaction } from "@/app/types/electron"
+import type { Account, CreditCard, Transaction } from "@/app/types/electron"
 
 type ImportKind = "pdf" | "ofx" | "csv" | null
 type ImportStep = "upload" | "preview"
@@ -87,10 +87,11 @@ function formatAmount(value: number): string {
 
 interface ImportDropdownProps {
     defaultAccountId?: number
+    defaultCreditCardId?: number
     onSuccess?: () => void
 }
 
-export default function ImportDropdown({ defaultAccountId, onSuccess }: ImportDropdownProps = {}) {
+export default function ImportDropdown({ defaultAccountId, defaultCreditCardId, onSuccess }: ImportDropdownProps = {}) {
     const [open, setOpen] = React.useState(false)
     const [kind, setKind] = React.useState<ImportKind>(null)
     const [step, setStep] = React.useState<ImportStep>("upload")
@@ -102,17 +103,29 @@ export default function ImportDropdown({ defaultAccountId, onSuccess }: ImportDr
     const [csvRows, setCsvRows] = React.useState<Record<string, unknown>[]>([])
     const [previewTransactions, setPreviewTransactions] = React.useState<Transaction[]>([])
     const [accounts, setAccounts] = React.useState<Account[]>([])
+    const [creditCards, setCreditCards] = React.useState<CreditCard[]>([])
     const [accountId, setAccountId] = React.useState<string>("")
 
     async function loadAccounts() {
         try {
-            const data = await window.electronAPI?.db.accounts.list()
-            if (data) {
-                setAccounts(data)
-                const preferred = defaultAccountId && data.find(a => a.id === defaultAccountId)
-                if (preferred) setAccountId(String(preferred.id))
-                else if (data.length > 0) setAccountId(String(data[0].id))
+            const [accs, cards] = await Promise.all([
+                window.electronAPI?.db.accounts.list(),
+                window.electronAPI?.db.creditCards.list(),
+            ])
+            const accList = accs ?? []
+            const cardList = cards ?? []
+            setAccounts(accList)
+            setCreditCards(cardList)
+            if (defaultCreditCardId) {
+                const pref = cardList.find(c => c.id === defaultCreditCardId)
+                if (pref) { setAccountId(`c:${pref.id}`); return }
             }
+            if (defaultAccountId) {
+                const pref = accList.find(a => a.id === defaultAccountId)
+                if (pref) { setAccountId(`a:${pref.id}`); return }
+            }
+            if (accList.length > 0) setAccountId(`a:${accList[0].id}`)
+            else if (cardList.length > 0) setAccountId(`c:${cardList[0].id}`)
         } catch { /* outside electron */ }
     }
 
@@ -197,16 +210,21 @@ export default function ImportDropdown({ defaultAccountId, onSuccess }: ImportDr
     }
 
     async function confirmImport() {
-        const id = parseInt(accountId, 10)
-        if (!id) {
-            toast.error("Selecione uma conta bancária")
+        if (!accountId) {
+            toast.error("Selecione uma conta ou cartão de destino")
             return
         }
         if (previewTransactions.length === 0) {
             toast.error("Não foi possível mapear os dados do CSV. Verifique se o arquivo possui colunas de data, descrição e valor.")
             return
         }
-        const transactions = previewTransactions.map(t => ({ ...t, account_id: id }))
+        const [kind, rawId] = accountId.split(":")
+        const destId = parseInt(rawId, 10)
+        const transactions = previewTransactions.map(t => ({
+            ...t,
+            account_id: kind === "a" ? destId : null,
+            credit_card_id: kind === "c" ? destId : null,
+        }))
         setSaving(true)
         try {
             const result = await window.electronAPI?.db.transactions.insert(transactions)
@@ -387,7 +405,7 @@ export default function ImportDropdown({ defaultAccountId, onSuccess }: ImportDr
                                     </Button>
                                     <Button
                                         onClick={confirmImport}
-                                        disabled={!accountId || accounts.length === 0 || saving}
+                                        disabled={!accountId || (accounts.length === 0 && creditCards.length === 0) || saving}
                                     >
                                         {saving ? "Importando…" : `Importar ${previewTransactions.length} transação(ões)`}
                                     </Button>

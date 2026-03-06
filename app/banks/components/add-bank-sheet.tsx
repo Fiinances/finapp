@@ -37,11 +37,6 @@ export function AddBankSheet({ open, onOpenChange, onSuccess }: AddBankSheetProp
         })
     }
 
-    function handleBalanceChange(e: React.ChangeEvent<HTMLInputElement>) {
-        const digits = e.target.value.replace(/\D/g, "")
-        setBalanceDigits(digits)
-    }
-
     function handleOpenChange(value: boolean) {
         if (!value) {
             setName("")
@@ -80,7 +75,7 @@ export function AddBankSheet({ open, onOpenChange, onSuccess }: AddBankSheetProp
                 <SheetHeader>
                     <SheetTitle>Adicionar conta bancária</SheetTitle>
                     <SheetDescription>
-                        Preencha os dados da sua conta. Não é necessário informar dados sensíveis.
+                        Preencha os dados da conta. Não é necessário informar dados sensíveis.
                     </SheetDescription>
                 </SheetHeader>
 
@@ -97,7 +92,7 @@ export function AddBankSheet({ open, onOpenChange, onSuccess }: AddBankSheetProp
                     </div>
 
                     <div className="flex flex-col gap-1.5">
-                        <Label htmlFor="bank">Banco</Label>
+                        <Label htmlFor="bank">Banco / Emissor</Label>
                         <Input
                             id="bank"
                             placeholder="Ex: Nubank, Itaú, Bradesco…"
@@ -107,7 +102,7 @@ export function AddBankSheet({ open, onOpenChange, onSuccess }: AddBankSheetProp
                     </div>
 
                     <div className="flex flex-col gap-1.5">
-                        <Label htmlFor="color">Cor da conta</Label>
+                        <Label htmlFor="color">Cor</Label>
                         <div className="flex items-center gap-3">
                             <input
                                 id="color"
@@ -128,7 +123,7 @@ export function AddBankSheet({ open, onOpenChange, onSuccess }: AddBankSheetProp
                             inputMode="numeric"
                             placeholder="R$ 0,00"
                             value={balanceDigits ? formatCurrency(balanceDigits) : ""}
-                            onChange={handleBalanceChange}
+                            onChange={(e) => setBalanceDigits(e.target.value.replace(/\D/g, ""))}
                         />
                     </div>
 

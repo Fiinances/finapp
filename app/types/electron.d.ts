@@ -1,6 +1,7 @@
 export interface Transaction {
   id?: number
   account_id?: number | null
+  credit_card_id?: number | null
   date: string
   description: string
   amount: number
@@ -22,9 +23,22 @@ export interface Account {
   updated_at?: string
 }
 
+export interface CreditCard {
+  id?: number
+  account_id: number
+  name: string
+  color?: string
+  credit_limit?: number
+  closing_day?: number
+  due_day?: number
+  created_at?: string
+  updated_at?: string
+}
+
 export interface TransactionFilters {
   type?: 'income' | 'expense'
   accountId?: number
+  creditCardId?: number
   source?: 'manual' | 'csv' | 'ofx'
 }
 
@@ -56,6 +70,13 @@ export interface ElectronAPI {
       insert: (account: Omit<Account, 'id' | 'created_at' | 'updated_at'>) => Promise<number>
       update: (id: number, data: Partial<Account>) => Promise<number>
       delete: (id: number) => Promise<number>
+    }
+    creditCards: {
+      list: () => Promise<CreditCard[]>
+      insert: (card: Omit<CreditCard, 'id' | 'created_at' | 'updated_at'>) => Promise<number>
+      update: (id: number, data: Partial<CreditCard>) => Promise<number>
+      delete: (id: number) => Promise<number>
+      deleteByMonth: (creditCardId: number, monthYear: string) => Promise<number>
     }
   }
 }
