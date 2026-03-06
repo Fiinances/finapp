@@ -57,6 +57,7 @@ export function MonthlyIncomeExpenseChart() {
     const grouped: Record<string, { income: number; expense: number }> = {}
     for (const m of months) grouped[m] = { income: 0, expense: 0 }
 
+    console.log(transactions)
     for (const t of transactions) {
         const ym = parseYearMonth(t.date)
         if (!grouped[ym]) continue
