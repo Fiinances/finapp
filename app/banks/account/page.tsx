@@ -20,7 +20,17 @@ function parseMaskedAmount(input: string): number {
 }
 
 function formatAmount(value: number): string {
-    return value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    return "R$ " + value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+function formatDate(date: string): string {
+    // YYYY-MM-DD → DD/MM/YYYY
+    const iso = date.match(/^(\d{4})-(\d{2})-(\d{2})/)
+    if (iso) return `${iso[3]}/${iso[2]}/${iso[1]}`
+    // DD-MM-YYYY → DD/MM/YYYY
+    const dmy = date.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/)
+    if (dmy) return `${dmy[1].padStart(2, "0")}/${dmy[2].padStart(2, "0")}/${dmy[3]}`
+    return date
 }
 
 interface MonthSummary {
@@ -92,7 +102,7 @@ function TxRow({ draft, onChange, onDelete, deleting }: TxRowProps) {
             <td className={cellCls}>
                 <input
                     type="text"
-                    value={draft.date}
+                    value={formatDate(draft.date)}
                     onChange={(e) => onChange("date", e.target.value)}
                     className={`${inputCls} w-[100px]`}
                     placeholder="DD/MM/AAAA"
@@ -123,10 +133,10 @@ function TxRow({ draft, onChange, onDelete, deleting }: TxRowProps) {
                     type="button"
                     onClick={() => onChange("type", draft.type === "income" ? "expense" : draft.type === "expense" ? "investment" : "income")}
                     className={`rounded-full px-2 py-0.5 text-xs font-medium cursor-pointer whitespace-nowrap ${draft.type === "income"
-                            ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                            : draft.type === "investment"
-                                ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
-                                : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                        ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                        : draft.type === "investment"
+                            ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+                            : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
                         }`}
                 >
                     {draft.type === "income" ? "Entrada" : draft.type === "investment" ? "Investimento" : "Saída"}

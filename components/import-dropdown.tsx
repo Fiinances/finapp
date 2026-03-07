@@ -85,6 +85,71 @@ function formatAmount(value: number): string {
     return value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
+// ── Month Picker ──────────────────────────────────────────────────────────────
+
+function MonthPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+    return (
+        <input
+            type="text"
+            inputMode="numeric"
+            placeholder="MM/AAAA"
+            value={value}
+            maxLength={7}
+            onChange={(e) => {
+                let v = e.target.value.replace(/[^\d/]/g, "")
+                if (v.length === 2 && !v.includes("/")) v += "/"
+                onChange(v)
+            }}
+            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        />
+    )
+}
+
+// ── Billing month inference ───────────────────────────────────────────────────
+
+function parseTransactionDate(dateStr: string): { day: number; month: number; year: number } | null {
+    // DD/MM/YYYY
+    let m = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
+    if (m) return { day: parseInt(m[1], 10), month: parseInt(m[2], 10), year: parseInt(m[3], 10) }
+    // YYYY-MM-DD
+    m = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})/)
+    if (m) return { day: parseInt(m[3], 10), month: parseInt(m[2], 10), year: parseInt(m[1], 10) }
+    // DD-MM-YYYY
+    m = dateStr.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/)
+    if (m) return { day: parseInt(m[1], 10), month: parseInt(m[2], 10), year: parseInt(m[3], 10) }
+    return null
+}
+
+/**
+ * Given a list of transactions and the card's closing day, determines which
+ * billing month the majority of transactions belong to.
+ *
+ * Transactions on day <= closingDay belong to the same month's bill.
+ * Transactions on day > closingDay belong to the following month's bill.
+ */
+function inferBillingMonth(transactions: Transaction[], closingDay: number, fallback: string): string {
+    const votes = new Map<string, number>()
+
+    for (const t of transactions) {
+        const parsed = parseTransactionDate(t.date)
+        if (!parsed) continue
+        let { day, month, year } = parsed
+        if (day > closingDay) {
+            month += 1
+            if (month > 12) { month = 1; year++ }
+        }
+        const key = `${String(month).padStart(2, "0")}/${year}`
+        votes.set(key, (votes.get(key) ?? 0) + 1)
+    }
+
+    let maxVotes = 0
+    let result = fallback
+    for (const [key, count] of votes) {
+        if (count > maxVotes) { maxVotes = count; result = key }
+    }
+    return result
+}
+
 interface ImportDropdownProps {
     defaultAccountId?: number
     defaultCreditCardId?: number
@@ -134,6 +199,16 @@ export default function ImportDropdown({ defaultAccountId, defaultCreditCardId, 
         const now = new Date()
         return `${String(now.getMonth() + 1).padStart(2, "0")}/${now.getFullYear()}`
     }
+
+    // Auto-infer billing month from transaction dates + card's closing_day
+    React.useEffect(() => {
+        if (!accountId.startsWith("c:") || previewTransactions.length === 0) return
+        const cardId = parseInt(accountId.slice(2), 10)
+        const card = creditCards.find(c => c.id === cardId)
+        if (!card?.closing_day) return
+        setBillingMonth(inferBillingMonth(previewTransactions, card.closing_day, currentMonthYear()))
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [accountId, creditCards, previewTransactions.length])
 
     function resetSheet() {
         setStep("upload")
@@ -230,8 +305,8 @@ export default function ImportDropdown({ defaultAccountId, defaultCreditCardId, 
         const [dest, rawId] = accountId.split(":")
         const destId = parseInt(rawId, 10)
         const isCreditCard = dest === "c"
-        if (isCreditCard && !billingMonth.match(/^\d{2}\/\d{4}$/)) {
-            toast.error("Informe o mês da fatura no formato MM/AAAA")
+        if (isCreditCard && !billingMonth.match(/^(0[1-9]|1[0-2])\/\d{4}$/)) {
+            toast.error("Informe o mês da fatura no formato MM/AAAA (mês entre 01 e 12)")
             return
         }
         const transactions = previewTransactions.map(t => ({
@@ -376,21 +451,8 @@ export default function ImportDropdown({ defaultAccountId, defaultCreditCardId, 
                                 <div className="flex flex-col gap-1.5">
                                     <label className="text-sm font-medium">
                                         Mês da fatura <span className="text-destructive">*</span>
-                                        <span className="text-muted-foreground font-normal ml-1">(MM/AAAA)</span>
                                     </label>
-                                    <input
-                                        type="text"
-                                        inputMode="numeric"
-                                        placeholder="Ex: 01/2025"
-                                        value={billingMonth}
-                                        maxLength={7}
-                                        onChange={(e) => {
-                                            let v = e.target.value.replace(/[^\d/]/g, "")
-                                            if (v.length === 2 && !v.includes("/")) v += "/"
-                                            setBillingMonth(v)
-                                        }}
-                                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                                    />
+                                    <MonthPicker value={billingMonth} onChange={setBillingMonth} />
                                 </div>
                             )}
 

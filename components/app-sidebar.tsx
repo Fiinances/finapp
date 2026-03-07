@@ -5,12 +5,12 @@ import {
   AudioWaveform,
   LayoutDashboard,
   Command,
-  GalleryVerticalEnd,
+  PiggyBankIcon,
   Wallet2,
 } from "lucide-react"
 
 import { NavPrincipal } from "@/components/nav-principal"
-import { NavUser } from "@/components/nav-user"
+import { NavSettings } from "@/components/nav-settings"
 import { TeamSwitcher } from "@/components/team-switcher"
 import {
   Sidebar,
@@ -22,16 +22,11 @@ import {
 
 // This is sample data.
 const data = {
-  user: {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
-  },
   teams: [
     {
-      name: "Acme Inc",
-      logo: GalleryVerticalEnd,
-      plan: "Enterprise",
+      name: "Finapp",
+      logo: PiggyBankIcon,
+      plan: "Sua carteira",
     },
     {
       name: "Acme Corp.",
@@ -69,7 +64,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         {/* <NavMain items={data.navMain} /> */}
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavSettings />
       </SidebarFooter>
       <SidebarRail />
     </Sidebar>

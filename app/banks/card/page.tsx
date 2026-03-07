@@ -21,7 +21,17 @@ function parseMaskedAmount(input: string): number {
 }
 
 function formatAmount(value: number): string {
-    return value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    return "R$ " + value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+function formatDate(date: string): string {
+    // YYYY-MM-DD → DD/MM/YYYY
+    const iso = date.match(/^(\d{4})-(\d{2})-(\d{2})/)
+    if (iso) return `${iso[3]}/${iso[2]}/${iso[1]}`
+    // DD-MM-YYYY → DD/MM/YYYY
+    const dmy = date.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/)
+    if (dmy) return `${dmy[1].padStart(2, "0")}/${dmy[2].padStart(2, "0")}/${dmy[3]}`
+    return date
 }
 
 interface MonthSummary {
@@ -96,7 +106,7 @@ function TxRow({ draft, onChange, onDelete, deleting }: TxRowProps) {
             <td className={cellCls}>
                 <input
                     type="text"
-                    value={draft.date}
+                    value={formatDate(draft.date)}
                     onChange={(e) => onChange("date", e.target.value)}
                     className={`${inputCls} w-[100px]`}
                     placeholder="DD/MM/AAAA"
@@ -124,10 +134,10 @@ function TxRow({ draft, onChange, onDelete, deleting }: TxRowProps) {
                     type="button"
                     onClick={() => onChange("type", draft.type === "income" ? "expense" : draft.type === "expense" ? "investment" : "income")}
                     className={`rounded-full px-2 py-0.5 text-xs font-medium cursor-pointer whitespace-nowrap ${draft.type === "income"
-                            ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                            : draft.type === "investment"
-                                ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
-                                : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                        ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                        : draft.type === "investment"
+                            ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+                            : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
                         }`}
                 >
                     {draft.type === "income" ? "Entrada" : draft.type === "investment" ? "Investimento" : "Saída"}
@@ -145,6 +155,21 @@ function TxRow({ draft, onChange, onDelete, deleting }: TxRowProps) {
                 <datalist id="card-category-options">
                     {CATEGORIES.map((c) => <option key={c} value={c} />)}
                 </datalist>
+            </td>
+            <td className={cellCls}>
+                <input
+                    type="text"
+                    inputMode="numeric"
+                    value={draft.billing_month ?? ""}
+                    placeholder="MM/AAAA"
+                    maxLength={7}
+                    onChange={(e) => {
+                        let v = e.target.value.replace(/[^\d/]/g, "")
+                        if (v.length === 2 && !v.includes("/")) v += "/"
+                        onChange("billing_month", v || null)
+                    }}
+                    className={`${inputCls} w-[90px]`}
+                />
             </td>
             <td className={`${cellCls} text-right`}>
                 <Button
@@ -185,6 +210,17 @@ function MonthRows({ transactions, onSaved }: MonthRowsProps) {
     )
 
     async function saveAll() {
+        const invalid = dirtyEntries.filter(t => {
+            const bm = drafts[t.id!].billing_month
+            return bm != null && bm !== "" && !/^(0[1-9]|1[0-2])\/\d{4}$/.test(bm)
+        })
+        if (invalid.length > 0) {
+            toast.error(
+                `Mês da fatura inválido em ${invalid.length} transação(ões). Use o formato MM/AAAA.`,
+                { position: "top-center" }
+            )
+            return
+        }
         setSaving(true)
         try {
             await Promise.all(dirtyEntries.map(t =>
@@ -194,6 +230,7 @@ function MonthRows({ transactions, onSaved }: MonthRowsProps) {
                     amount: drafts[t.id!].amount,
                     type: drafts[t.id!].type,
                     category: drafts[t.id!].category,
+                    billing_month: drafts[t.id!].billing_month,
                 })
             ))
             toast.success(`${dirtyEntries.length} transação(ões) salva(s)`, { position: "top-center" })
@@ -231,7 +268,7 @@ function MonthRows({ transactions, onSaved }: MonthRowsProps) {
             ))}
             {dirtyEntries.length > 0 && (
                 <tr className="bg-primary/5 border-t">
-                    <td colSpan={6} className="px-3 py-2 text-right">
+                    <td colSpan={7} className="px-3 py-2 text-right">
                         <Button size="sm" disabled={saving} onClick={saveAll}>
                             <SaveIcon className="size-3.5 mr-1.5" />
                             {saving ? "Salvando…" : `Salvar ${dirtyEntries.length} alteração(ões)`}
@@ -307,8 +344,8 @@ export default function CardDetailPage() {
         }
     }
 
-    const totalIncome = summaries.reduce((s, r) => s + r.income, 0)
     const totalExpense = summaries.reduce((s, r) => s + r.expense, 0)
+    const totalNet = summaries.reduce((s, r) => s + r.total, 0)
     const totalCount = summaries.reduce((s, r) => s + r.count, 0)
 
     return (
@@ -379,17 +416,11 @@ export default function CardDetailPage() {
 
             {/* Summary cards */}
             {!loading && summaries.length > 0 && (
-                <div className="grid gap-3 sm:grid-cols-3">
+                <div className="grid gap-3 sm:grid-cols-2">
                     <Card>
                         <CardHeader className="pb-1">
                             <CardDescription>Total de transações</CardDescription>
                             <CardTitle className="text-2xl">{totalCount}</CardTitle>
-                        </CardHeader>
-                    </Card>
-                    <Card>
-                        <CardHeader className="pb-1">
-                            <CardDescription>Total entradas</CardDescription>
-                            <CardTitle className="text-2xl text-green-600 dark:text-green-400">{fmt(totalIncome)}</CardTitle>
                         </CardHeader>
                     </Card>
                     <Card>
@@ -421,7 +452,6 @@ export default function CardDetailPage() {
                                     <tr className="border-b bg-muted/50">
                                         <th className="px-4 py-2.5 text-left font-medium w-[180px]">Mês da fatura</th>
                                         <th className="px-4 py-2.5 text-right font-medium w-16">Qtd.</th>
-                                        <th className="px-4 py-2.5 text-right font-medium">Entradas</th>
                                         <th className="px-4 py-2.5 text-right font-medium">Saídas</th>
                                         <th className="px-4 py-2.5 text-right font-medium">Total</th>
                                         <th className="px-4 py-2.5 w-20" />
@@ -447,7 +477,6 @@ export default function CardDetailPage() {
                                                         </div>
                                                     </td>
                                                     <td className="px-4 py-2.5 text-right text-muted-foreground">{s.count}</td>
-                                                    <td className="px-4 py-2.5 text-right text-green-600 dark:text-green-400">{fmt(s.income)}</td>
                                                     <td className="px-4 py-2.5 text-right text-red-600 dark:text-red-400">{fmt(s.expense)}</td>
                                                     <td className={`px-4 py-2.5 text-right font-semibold ${s.total >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
                                                         {fmt(s.total)}
@@ -478,6 +507,7 @@ export default function CardDetailPage() {
                                                                         <th className="px-2 py-1.5 text-right font-medium text-muted-foreground w-[110px]">Valor</th>
                                                                         <th className="px-2 py-1.5 text-center font-medium text-muted-foreground w-[90px]">Tipo</th>
                                                                         <th className="px-2 py-1.5 text-left font-medium text-muted-foreground w-[140px]">Categoria</th>
+                                                                        <th className="px-2 py-1.5 text-left font-medium text-muted-foreground w-[100px]">Mês da fatura</th>
                                                                         <th className="px-2 py-1.5 w-16" />
                                                                     </tr>
                                                                 </thead>
@@ -496,10 +526,9 @@ export default function CardDetailPage() {
                                     <tr className="border-t bg-muted/50 font-semibold">
                                         <td className="px-4 py-2.5">Total geral</td>
                                         <td className="px-4 py-2.5 text-right text-muted-foreground">{totalCount}</td>
-                                        <td className="px-4 py-2.5 text-right text-green-600 dark:text-green-400">{fmt(totalIncome)}</td>
                                         <td className="px-4 py-2.5 text-right text-red-600 dark:text-red-400">{fmt(totalExpense)}</td>
-                                        <td className={`px-4 py-2.5 text-right font-bold ${totalIncome - totalExpense >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
-                                            {fmt(totalIncome - totalExpense)}
+                                        <td className={`px-4 py-2.5 text-right font-bold ${totalNet >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
+                                            {fmt(totalNet)}
                                         </td>
                                         <td />
                                     </tr>
