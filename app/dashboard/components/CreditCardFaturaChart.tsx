@@ -28,7 +28,11 @@ function fmtCurrency(v: number): string {
     return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 0, maximumFractionDigits: 0 })
 }
 
-export function CreditCardFaturaChart() {
+interface CreditCardFaturaChartProps {
+    creditCardIds?: number[]
+}
+
+export function CreditCardFaturaChart({ creditCardIds }: CreditCardFaturaChartProps = {}) {
     const [cards, setCards] = React.useState<CreditCard[]>([])
     const [transactions, setTransactions] = React.useState<Transaction[]>([])
     const [loading, setLoading] = React.useState(true)
@@ -67,15 +71,19 @@ export function CreditCardFaturaChart() {
         grouped[bm][t.credit_card_id] = (grouped[bm][t.credit_card_id] ?? 0) + t.amount
     }
 
+    const filteredCards = creditCardIds != null
+        ? cards.filter((c) => creditCardIds.includes(c.id!))
+        : cards
+
     const chartData = last6.map((m) => {
         const entry: Record<string, unknown> = { month: m }
-        for (const card of cards) {
+        for (const card of filteredCards) {
             entry[String(card.id)] = parseFloat((grouped[m][card.id!] ?? 0).toFixed(2))
         }
         return entry
     })
 
-    const chartConfig: ChartConfig = cards.reduce<ChartConfig>((cfg, card, i) => {
+    const chartConfig: ChartConfig = filteredCards.reduce<ChartConfig>((cfg, card, i) => {
         cfg[String(card.id)] = {
             label: card.name,
             color: card.color ?? FALLBACK_COLORS[i % FALLBACK_COLORS.length],
@@ -83,7 +91,9 @@ export function CreditCardFaturaChart() {
         return cfg
     }, {})
 
-    const hasData = transactions.some((t) => t.credit_card_id != null && t.type === "expense")
+    const hasData = filteredCards.length > 0 && transactions.some(
+        (t) => t.credit_card_id != null && t.type === "expense" && filteredCards.some((c) => c.id === t.credit_card_id)
+    )
 
     return (
         <Card>
@@ -94,14 +104,14 @@ export function CreditCardFaturaChart() {
             <CardContent>
                 {loading ? (
                     <div className="flex items-center justify-center py-12 text-sm text-muted-foreground">Carregando…</div>
-                ) : !hasData || cards.length === 0 ? (
+                ) : !hasData || filteredCards.length === 0 ? (
                     <p className="text-sm text-muted-foreground text-center py-12">
-                        {cards.length === 0 ? "Nenhum cartão cadastrado." : "Nenhuma fatura importada ainda."}
+                        {filteredCards.length === 0 ? "Nenhum cartão cadastrado." : "Nenhuma fatura importada ainda."}
                     </p>
                 ) : (
                     <>
                         <div className="flex flex-wrap gap-3 mb-4 text-xs">
-                            {cards.map((card, i) => (
+                            {filteredCards.map((card, i) => (
                                 <div key={card.id} className="flex items-center gap-1.5">
                                     <span
                                         className="size-2.5 rounded-full shrink-0"
@@ -135,7 +145,7 @@ export function CreditCardFaturaChart() {
                                         />
                                     }
                                 />
-                                {cards.map((card, i) => (
+                                {filteredCards.map((card, i) => (
                                     <Bar
                                         key={card.id}
                                         dataKey={String(card.id)}

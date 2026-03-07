@@ -32,7 +32,11 @@ const chartConfig: ChartConfig = {
     net: { label: "Saldo líquido", color: "#6366f1" },
 }
 
-export function MonthlyIncomeExpenseChart() {
+interface MonthlyIncomeExpenseChartProps {
+    accountId?: number
+}
+
+export function MonthlyIncomeExpenseChart({ accountId }: MonthlyIncomeExpenseChartProps = {}) {
     const [transactions, setTransactions] = React.useState<Transaction[]>([])
     const [loading, setLoading] = React.useState(true)
 
@@ -40,13 +44,15 @@ export function MonthlyIncomeExpenseChart() {
         async function load() {
             setLoading(true)
             try {
-                const txns = await window.electronAPI?.db.transactions.list() ?? []
+                const txns = await window.electronAPI?.db.transactions.list(
+                    accountId != null ? { accountId } : undefined
+                ) ?? []
                 setTransactions(txns)
             } catch { /* outside electron */ }
             finally { setLoading(false) }
         }
         load()
-    }, [])
+    }, [accountId])
 
     const now = new Date()
     const months: string[] = []

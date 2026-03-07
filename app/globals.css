@@ -115,10 +115,60 @@
 }
 
 @layer base {
-  * {
-    @apply border-border outline-ring/50;
+    * {
+        @apply border-border outline-ring/50;
     }
-  body {
-    @apply bg-background text-foreground;
+
+    body {
+        @apply bg-background text-foreground;
+    }
+
+    /* ── Custom scrollbar (Perfect Scrollbar style) ───────────── */
+
+    /* Firefox */
+    * {
+        scrollbar-width: thin;
+        scrollbar-color: rgba(0, 0, 0, 0.18) transparent;
+    }
+
+    .dark * {
+        scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+    }
+
+    /* Webkit / Electron */
+    ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: rgba(0, 0, 0, 0.18);
+        border-radius: 9999px;
+        transition: background 0.2s ease;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        background: rgba(0, 0, 0, 0.38);
+    }
+
+    ::-webkit-scrollbar-thumb:active {
+        background: rgba(0, 0, 0, 0.55);
+    }
+
+    /* Dark mode */
+    .dark ::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.18);
+    }
+
+    .dark ::-webkit-scrollbar-thumb:hover {
+        background: rgba(255, 255, 255, 0.35);
+    }
+
+    .dark ::-webkit-scrollbar-thumb:active {
+        background: rgba(255, 255, 255, 0.5);
     }
 }

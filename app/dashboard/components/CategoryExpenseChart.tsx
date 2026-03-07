@@ -26,7 +26,11 @@ function fmtCurrency(v: number): string {
     return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
 }
 
-export function CategoryExpenseChart() {
+interface CategoryExpenseChartProps {
+    accountId?: number
+}
+
+export function CategoryExpenseChart({ accountId }: CategoryExpenseChartProps = {}) {
     const now = new Date()
     const [year, setYear] = React.useState(now.getFullYear())
     const [month, setMonth] = React.useState(now.getMonth() + 1)
@@ -37,13 +41,15 @@ export function CategoryExpenseChart() {
         async function load() {
             setLoading(true)
             try {
-                const txns = await window.electronAPI?.db.transactions.list() ?? []
+                const txns = await window.electronAPI?.db.transactions.list(
+                    accountId != null ? { accountId } : undefined
+                ) ?? []
                 setTransactions(txns)
             } catch { /* outside electron */ }
             finally { setLoading(false) }
         }
         load()
-    }, [])
+    }, [accountId])
 
     const yearOptions = [now.getFullYear() - 2, now.getFullYear() - 1, now.getFullYear()]
     const monthPrefix = `${year}-${String(month).padStart(2, "0")}`

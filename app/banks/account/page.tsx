@@ -5,9 +5,12 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { ArrowLeftIcon, ChevronDownIcon, ChevronRightIcon, SaveIcon, Trash2Icon } from "lucide-react"
+import { ArrowLeftIcon, ChevronDownIcon, ChevronRightIcon, SaveIcon, Trash2Icon, CreditCardIcon } from "lucide-react"
 import ImportDropdown from "@/components/import-dropdown"
-import type { Account, Transaction } from "@/app/types/electron"
+import { MonthlyIncomeExpenseChart } from "@/app/dashboard/components/MonthlyIncomeExpenseChart"
+import { CategoryExpenseChart } from "@/app/dashboard/components/CategoryExpenseChart"
+import { CreditCardFaturaChart } from "@/app/dashboard/components/CreditCardFaturaChart"
+import type { Account, Transaction, CreditCard } from "@/app/types/electron"
 
 const CATEGORIES = [
     "Alimentação", "Transporte", "Moradia", "Saúde", "Educação",
@@ -254,6 +257,14 @@ function MonthRows({ transactions, onSaved }: MonthRowsProps) {
     )
 }
 
+function txBillingMonth(t: Transaction): string {
+    if (t.billing_month) return t.billing_month
+    if (/^\d{4}-\d{2}-\d{2}/.test(t.date)) return `${t.date.slice(5, 7)}/${t.date.slice(0, 4)}`
+    const br = t.date.match(/^(\d{2})\/(\d{2})\/(\d{4})$/)
+    if (br) return `${br[2]}/${br[3]}`
+    return ""
+}
+
 // ── Page ─────────────────────────────────────────────────────────
 
 export default function AccountDetailPage() {
@@ -266,18 +277,41 @@ export default function AccountDetailPage() {
     const [loading, setLoading] = React.useState(true)
     const [expanded, setExpanded] = React.useState<Set<string>>(new Set())
     const [deletingMonth, setDeletingMonth] = React.useState<string | null>(null)
+    const [linkedCards, setLinkedCards] = React.useState<CreditCard[]>([])
+    const [cardSpend, setCardSpend] = React.useState<Record<number, number>>({})
 
     async function load() {
         if (!accountId) return
         setLoading(true)
         try {
-            const [accounts, transactions] = await Promise.all([
+            const [accounts, accountTxns, allCards] = await Promise.all([
                 window.electronAPI?.db.accounts.list() ?? [],
                 window.electronAPI?.db.transactions.list({ accountId }) ?? [],
+                window.electronAPI?.db.creditCards.list() ?? [],
             ])
             const found = (accounts ?? []).find((a) => a.id === accountId) ?? null
             setAccount(found)
-            setSummaries(buildSummaries(transactions ?? []))
+            setSummaries(buildSummaries(accountTxns ?? []))
+
+            const linked = (allCards ?? []).filter((c) => c.account_id === accountId)
+            setLinkedCards(linked)
+
+            if (linked.length > 0) {
+                const cardTxnsArrays = await Promise.all(
+                    linked.map((c) =>
+                        window.electronAPI?.db.transactions.list({ creditCardId: c.id! }) ?? Promise.resolve([])
+                    )
+                )
+                const now = new Date()
+                const currentBm = `${String(now.getMonth() + 1).padStart(2, "0")}/${now.getFullYear()}`
+                const spendMap: Record<number, number> = {}
+                for (let i = 0; i < linked.length; i++) {
+                    spendMap[linked[i].id!] = (cardTxnsArrays[i] ?? [])
+                        .filter((t) => t.type === "expense" && txBillingMonth(t) === currentBm)
+                        .reduce((s, t) => s + t.amount, 0)
+                }
+                setCardSpend(spendMap)
+            }
         } catch {
             // outside electron
         } finally {
@@ -362,6 +396,78 @@ export default function AccountDetailPage() {
                             <CardTitle className="text-2xl text-amber-600 dark:text-amber-400">{fmt(totalInvestment)}</CardTitle>
                         </CardHeader>
                     </Card>
+                </div>
+            )}
+
+            {/* Linked credit cards */}
+            {!loading && linkedCards.length > 0 && (
+                <div>
+                    <div className="flex items-center gap-2 mb-3">
+                        <CreditCardIcon className="size-4 text-muted-foreground" />
+                        <h2 className="text-sm font-semibold">Cartões vinculados</h2>
+                        <span className="text-xs bg-muted text-muted-foreground rounded-full px-2 py-0.5">
+                            {linkedCards.length}
+                        </span>
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                        {linkedCards.map((card) => {
+                            const color = card.color ?? "#6366f1"
+                            const limit = card.credit_limit ?? 0
+                            const spend = cardSpend[card.id!] ?? 0
+                            const pct = limit > 0 ? Math.min((spend / limit) * 100, 100) : 0
+                            return (
+                                <div
+                                    key={card.id}
+                                    className="relative overflow-hidden rounded-2xl p-5 text-white cursor-pointer hover:scale-[1.01] transition-all shadow-md select-none"
+                                    style={{ background: `linear-gradient(135deg, ${color}, ${color}cc)` }}
+                                    onClick={() => router.push(`/banks/card?id=${card.id}`)}
+                                    title={`Abrir cartão ${card.name}`}
+                                >
+                                    <div className="pointer-events-none absolute -right-5 -top-5 size-28 rounded-full bg-white/10" />
+                                    <div className="pointer-events-none absolute -right-10 -top-10 size-44 rounded-full bg-white/5" />
+                                    <div className="flex items-start justify-between mb-3">
+                                        <div className="min-w-0">
+                                            <p className="text-[11px] font-medium opacity-70 mb-0.5">Cartão de crédito</p>
+                                            <p className="font-semibold text-sm leading-tight truncate">{card.name}</p>
+                                        </div>
+                                        <CreditCardIcon className="size-5 opacity-60 shrink-0 ml-2 mt-0.5" />
+                                    </div>
+                                    {limit > 0 && (
+                                        <div className="mb-3">
+                                            <div className="flex justify-between text-[11px] opacity-70 mb-1.5">
+                                                <span>{fmt(spend)} gasto</span>
+                                                <span>Limite {fmt(limit)}</span>
+                                            </div>
+                                            <div className="h-1.5 rounded-full bg-white/25">
+                                                <div
+                                                    className="h-full rounded-full bg-white transition-all"
+                                                    style={{ width: `${pct.toFixed(0)}%` }}
+                                                />
+                                            </div>
+                                            <p className="text-[11px] opacity-60 mt-1">{pct.toFixed(0)}% utilizado neste mês</p>
+                                        </div>
+                                    )}
+                                    <div className="flex gap-4 text-[11px] opacity-70 mt-1">
+                                        {card.closing_day != null && <span>Fecha: dia {card.closing_day}</span>}
+                                        {card.due_day != null && <span>Vence: dia {card.due_day}</span>}
+                                    </div>
+                                </div>
+                            )
+                        })}
+                    </div>
+                </div>
+            )}
+
+            {/* Analytics */}
+            {!loading && account && (
+                <div className="flex flex-col gap-4">
+                    <MonthlyIncomeExpenseChart accountId={accountId} />
+                    <div className={linkedCards.length > 0 ? "grid gap-4 lg:grid-cols-2" : ""}>
+                        <CategoryExpenseChart accountId={accountId} />
+                        {linkedCards.length > 0 && (
+                            <CreditCardFaturaChart creditCardIds={linkedCards.map((c) => c.id!)} />
+                        )}
+                    </div>
                 </div>
             )}
 

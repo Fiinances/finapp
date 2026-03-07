@@ -18,7 +18,8 @@ import {
     SheetClose,
 } from "@/components/ui/sheet"
 import { Input } from "@/components/ui/input"
-import { Trash2Icon } from "lucide-react"
+import { InfoIcon, Trash2Icon } from "lucide-react"
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
 import Papa from "papaparse"
 import { parse as parseOfx } from "ofx-js"
 import { toast } from "sonner"
@@ -362,7 +363,7 @@ export default function ImportDropdown({ defaultAccountId, defaultCreditCardId, 
                         <SheetDescription>
                             {kind === "pdf" && "Envie um arquivo PDF para processarmos."}
                             {kind === "ofx" && "Envie um arquivo OFX (ex.: extrato) para importação."}
-                            {kind === "csv" && step === "upload" && "Envie um arquivo CSV com os dados."}
+                            {kind === "csv" && step === "upload" && "Envie um arquivo CSV com colunas de data, descrição e valor."}
                             {kind === "csv" && step === "preview" && `${previewTransactions.length} transação(ões) mapeada(s). Edite os valores e categorias antes de salvar.`}
                         </SheetDescription>
                     </SheetHeader>
@@ -380,6 +381,36 @@ export default function ImportDropdown({ defaultAccountId, defaultCreditCardId, 
                                     <p className="text-xs text-muted-foreground mt-1">Arquivo: {fileName}</p>
                                 )}
                             </div>
+
+                            {kind === "csv" && (
+                                <Alert>
+                                    <InfoIcon className="size-4" />
+                                    <AlertTitle>Formato esperado do CSV</AlertTitle>
+                                    <AlertDescription>
+                                        <p className="text-muted-foreground">O arquivo deve ter cabeçalhos na primeira linha. Os nomes das colunas são detectados automaticamente.</p>
+                                        <div className="mt-2 grid grid-cols-3 gap-2">
+                                            <div className="rounded-md bg-muted/50 border px-2.5 py-2 text-xs">
+                                                <p className="font-medium mb-0.5">Data</p>
+                                                <p className="text-muted-foreground leading-snug">data, date, dt</p>
+                                                <p className="text-muted-foreground/70 leading-snug mt-0.5">Ex: 15/01/2025</p>
+                                            </div>
+                                            <div className="rounded-md bg-muted/50 border px-2.5 py-2 text-xs">
+                                                <p className="font-medium mb-0.5">Descrição</p>
+                                                <p className="text-muted-foreground leading-snug">descri, historico, memo…</p>
+                                                <p className="text-muted-foreground/70 leading-snug mt-0.5">Ex: Supermercado</p>
+                                            </div>
+                                            <div className="rounded-md bg-muted/50 border px-2.5 py-2 text-xs">
+                                                <p className="font-medium mb-0.5">Valor</p>
+                                                <p className="text-muted-foreground leading-snug">valor, amount, value…</p>
+                                                <p className="text-muted-foreground/70 leading-snug mt-0.5">− saída · + entrada</p>
+                                            </div>
+                                        </div>
+                                        <p className="mt-2 text-xs text-muted-foreground">
+                                            Separador: <span className="font-mono bg-muted border rounded px-1">,</span> ou <span className="font-mono bg-muted border rounded px-1">;</span> — Valores negativos → <strong>Saída</strong>, positivos → <strong>Entrada</strong>.
+                                        </p>
+                                    </AlertDescription>
+                                </Alert>
+                            )}
 
                             {kind === "pdf" && (
                                 <>
