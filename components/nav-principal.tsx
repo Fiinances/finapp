@@ -23,7 +23,7 @@ export function NavPrincipal({
 }) {
 
   return (
-    <SidebarGroup className="group-data-[collapsible=icon]:hidden">
+    <SidebarGroup>
       <SidebarGroupLabel>Principal</SidebarGroupLabel>
       <SidebarMenu>
         {principals.map((item) => (
