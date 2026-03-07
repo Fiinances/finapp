@@ -18,6 +18,7 @@ import {
     SheetClose,
 } from "@/components/ui/sheet"
 import { Input } from "@/components/ui/input"
+import { Trash2Icon } from "lucide-react"
 import Papa from "papaparse"
 import { parse as parseOfx } from "ofx-js"
 import { toast } from "sonner"
@@ -213,6 +214,10 @@ export default function ImportDropdown({ defaultAccountId, defaultCreditCardId, 
         })
     }
 
+    function removeRow(index: number) {
+        setPreviewTransactions(prev => prev.filter((_, i) => i !== index))
+    }
+
     async function confirmImport() {
         if (!accountId) {
             toast.error("Selecione uma conta ou cartão de destino")
@@ -399,6 +404,7 @@ export default function ImportDropdown({ defaultAccountId, defaultCreditCardId, 
                                             <th className="px-3 py-2 text-right font-medium whitespace-nowrap">Valor</th>
                                             <th className="px-3 py-2 text-center font-medium whitespace-nowrap">Tipo</th>
                                             <th className="px-3 py-2 text-left font-medium whitespace-nowrap">Categoria</th>
+                                            <th className="px-3 py-2 w-8" />
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -418,13 +424,15 @@ export default function ImportDropdown({ defaultAccountId, defaultCreditCardId, 
                                                 <td className="px-3 py-1.5 text-center">
                                                     <button
                                                         type="button"
-                                                        onClick={() => updateRow(i, "type", t.type === "income" ? "expense" : "income")}
+                                                        onClick={() => updateRow(i, "type", t.type === "income" ? "expense" : t.type === "expense" ? "investment" : "income")}
                                                         className={`rounded-full px-2 py-0.5 text-xs font-medium cursor-pointer ${t.type === "income"
                                                             ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                                                            : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                                                            : t.type === "investment"
+                                                                ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+                                                                : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
                                                             }`}
                                                     >
-                                                        {t.type === "income" ? "Entrada" : "Saída"}
+                                                        {t.type === "income" ? "Entrada" : t.type === "investment" ? "Investimento" : "Saída"}
                                                     </button>
                                                 </td>
                                                 <td className="px-3 py-1.5">
@@ -436,6 +444,16 @@ export default function ImportDropdown({ defaultAccountId, defaultCreditCardId, 
                                                         onChange={e => updateRow(i, "category", e.target.value)}
                                                         className="h-7 w-32 rounded border border-input bg-transparent px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
                                                     />
+                                                </td>
+                                                <td className="px-3 py-1.5 text-right">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => removeRow(i)}
+                                                        title="Remover transação"
+                                                        className="rounded p-1 text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                                                    >
+                                                        <Trash2Icon className="size-3.5" />
+                                                    </button>
                                                 </td>
                                             </tr>
                                         ))}

@@ -54,6 +54,7 @@ async function migrate() {
     }
 
     const hasTransactions = await db.schema.hasTable('transactions')
+
     if (!hasTransactions) {
         await db.schema.createTable('transactions', (t) => {
             t.increments('id').primary()
@@ -62,7 +63,7 @@ async function migrate() {
             t.date('date').notNullable()
             t.string('description').notNullable()
             t.decimal('amount', 15, 2).notNullable()
-            t.enu('type', ['income', 'expense']).notNullable()
+            t.enu('type', ['income', 'expense', 'investment']).notNullable()
             t.string('category')
             t.enu('source', ['manual', 'csv', 'ofx']).defaultTo('manual')
             t.string('external_id') // OFX FITID — evita duplicatas

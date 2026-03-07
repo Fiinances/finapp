@@ -28,6 +28,7 @@ function fmtK(v: number): string {
 const chartConfig: ChartConfig = {
     income: { label: "Receitas", color: "#22c55e" },
     expense: { label: "Despesas", color: "#ef4444" },
+    investment: { label: "Investimentos", color: "#f59e0b" },
     net: { label: "Saldo líquido", color: "#6366f1" },
 }
 
@@ -54,14 +55,14 @@ export function MonthlyIncomeExpenseChart() {
         months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`)
     }
 
-    const grouped: Record<string, { income: number; expense: number }> = {}
-    for (const m of months) grouped[m] = { income: 0, expense: 0 }
+    const grouped: Record<string, { income: number; expense: number; investment: number }> = {}
+    for (const m of months) grouped[m] = { income: 0, expense: 0, investment: 0 }
 
-    console.log(transactions)
     for (const t of transactions) {
         const ym = parseYearMonth(t.date)
         if (!grouped[ym]) continue
         if (t.type === "income") grouped[ym].income += t.amount
+        else if (t.type === "investment") grouped[ym].investment += t.amount
         else grouped[ym].expense += t.amount
     }
 
@@ -69,6 +70,7 @@ export function MonthlyIncomeExpenseChart() {
         month: formatMonthLabel(m),
         income: parseFloat(grouped[m].income.toFixed(2)),
         expense: parseFloat(grouped[m].expense.toFixed(2)),
+        investment: parseFloat(grouped[m].investment.toFixed(2)),
         net: parseFloat((grouped[m].income - grouped[m].expense).toFixed(2)),
     }))
 
@@ -114,8 +116,9 @@ export function MonthlyIncomeExpenseChart() {
                                     tickFormatter={fmtK}
                                 />
                                 <ChartTooltip content={<ChartTooltipContent />} />
-                                <Bar dataKey="income" fill="var(--color-income)" radius={[4, 4, 0, 0]} maxBarSize={22} />
-                                <Bar dataKey="expense" fill="var(--color-expense)" radius={[4, 4, 0, 0]} maxBarSize={22} />
+                                <Bar dataKey="income" fill="var(--color-income)" radius={[4, 4, 0, 0]} maxBarSize={18} />
+                                <Bar dataKey="expense" fill="var(--color-expense)" radius={[4, 4, 0, 0]} maxBarSize={18} />
+                                <Bar dataKey="investment" fill="var(--color-investment)" radius={[4, 4, 0, 0]} maxBarSize={18} />
                                 <Line
                                     type="monotone"
                                     dataKey="net"

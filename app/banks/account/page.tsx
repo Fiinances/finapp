@@ -29,6 +29,7 @@ interface MonthSummary {
     count: number
     income: number
     expense: number
+    investment: number
     total: number
     transactions: Transaction[]
 }
@@ -54,15 +55,16 @@ function buildSummaries(transactions: Transaction[]): MonthSummary[] {
             map.set(ym, {
                 monthYear: `${month}/${year}`,
                 label: `${MONTH_NAMES[parseInt(month) - 1]} ${year}`,
-                count: 0, income: 0, expense: 0, total: 0, transactions: [],
+                count: 0, income: 0, expense: 0, investment: 0, total: 0, transactions: [],
             })
         }
         const entry = map.get(ym)!
         entry.count++
         entry.transactions.push(t)
         if (t.type === "income") entry.income += t.amount
+        else if (t.type === "investment") entry.investment += t.amount
         else entry.expense += t.amount
-        entry.total = entry.income - entry.expense
+        entry.total = entry.income - entry.expense - entry.investment
     }
     return Array.from(map.values()).sort((a, b) => b.monthYear.localeCompare(a.monthYear))
 }
@@ -71,55 +73,16 @@ function fmt(value: number) {
     return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
 }
 
-// ── Inline-editable transaction row ──────────────────────────────
+// ── Inline-editable transaction row (controlled) ────────────────
 
 interface TxRowProps {
-    tx: Transaction
-    onSaved: () => void
+    draft: Transaction
+    onChange: <K extends keyof Transaction>(field: K, value: Transaction[K]) => void
+    onDelete: () => void
+    deleting: boolean
 }
 
-function TxRow({ tx, onSaved }: TxRowProps) {
-    const [draft, setDraft] = React.useState<Transaction>({ ...tx })
-    const [saving, setSaving] = React.useState(false)
-    const [deleting, setDeleting] = React.useState(false)
-    const isDirty = JSON.stringify(draft) !== JSON.stringify(tx)
-
-    function set<K extends keyof Transaction>(field: K, value: Transaction[K]) {
-        setDraft((prev) => ({ ...prev, [field]: value }))
-    }
-
-    async function save() {
-        if (!tx.id) return
-        setSaving(true)
-        try {
-            await window.electronAPI?.db.transactions.update(tx.id, {
-                date: draft.date,
-                description: draft.description,
-                amount: draft.amount,
-                type: draft.type,
-                category: draft.category,
-            })
-            toast.success("Transação atualizada", { position: "top-center" })
-            onSaved()
-        } catch (err) {
-            toast.error(err instanceof Error ? err.message : "Erro ao salvar")
-        } finally {
-            setSaving(false)
-        }
-    }
-
-    async function deleteTx() {
-        if (!tx.id) return
-        setDeleting(true)
-        try {
-            await window.electronAPI?.db.transactions.delete(tx.id)
-            onSaved()
-        } catch (err) {
-            toast.error(err instanceof Error ? err.message : "Erro ao excluir")
-            setDeleting(false)
-        }
-    }
-
+function TxRow({ draft, onChange, onDelete, deleting }: TxRowProps) {
     const cellCls = "px-2 py-1.5"
     const inputCls = "h-7 w-full rounded border border-transparent bg-transparent px-1.5 text-xs focus:border-input focus:outline-none focus:ring-1 focus:ring-ring hover:border-input/50 transition-colors"
 
@@ -130,7 +93,7 @@ function TxRow({ tx, onSaved }: TxRowProps) {
                 <input
                     type="text"
                     value={draft.date}
-                    onChange={(e) => set("date", e.target.value)}
+                    onChange={(e) => onChange("date", e.target.value)}
                     className={`${inputCls} w-[100px]`}
                     placeholder="DD/MM/AAAA"
                 />
@@ -140,7 +103,7 @@ function TxRow({ tx, onSaved }: TxRowProps) {
                 <input
                     type="text"
                     value={draft.description}
-                    onChange={(e) => set("description", e.target.value)}
+                    onChange={(e) => onChange("description", e.target.value)}
                     className={`${inputCls} min-w-[160px]`}
                 />
             </td>
@@ -150,7 +113,7 @@ function TxRow({ tx, onSaved }: TxRowProps) {
                     type="text"
                     inputMode="decimal"
                     value={formatAmount(draft.amount)}
-                    onChange={(e) => set("amount", parseMaskedAmount(e.target.value))}
+                    onChange={(e) => onChange("amount", parseMaskedAmount(e.target.value))}
                     className={`${inputCls} w-[96px] text-right`}
                 />
             </td>
@@ -158,13 +121,15 @@ function TxRow({ tx, onSaved }: TxRowProps) {
             <td className={`${cellCls} text-center`}>
                 <button
                     type="button"
-                    onClick={() => set("type", draft.type === "income" ? "expense" : "income")}
+                    onClick={() => onChange("type", draft.type === "income" ? "expense" : draft.type === "expense" ? "investment" : "income")}
                     className={`rounded-full px-2 py-0.5 text-xs font-medium cursor-pointer whitespace-nowrap ${draft.type === "income"
                             ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                            : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                            : draft.type === "investment"
+                                ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+                                : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
                         }`}
                 >
-                    {draft.type === "income" ? "Entrada" : "Saída"}
+                    {draft.type === "income" ? "Entrada" : draft.type === "investment" ? "Investimento" : "Saída"}
                 </button>
             </td>
             {/* Category */}
@@ -173,7 +138,7 @@ function TxRow({ tx, onSaved }: TxRowProps) {
                     list="account-category-options"
                     type="text"
                     value={draft.category ?? ""}
-                    onChange={(e) => set("category", e.target.value)}
+                    onChange={(e) => onChange("category", e.target.value)}
                     placeholder="Categoria…"
                     className={`${inputCls} w-[120px]`}
                 />
@@ -183,32 +148,99 @@ function TxRow({ tx, onSaved }: TxRowProps) {
             </td>
             {/* Actions */}
             <td className={`${cellCls} text-right`}>
-                <div className="flex items-center justify-end gap-1">
-                    {isDirty && (
-                        <Button
-                            size="icon"
-                            variant="ghost"
-                            className="size-7 text-primary hover:text-primary"
-                            disabled={saving}
-                            onClick={save}
-                            title="Salvar"
-                        >
-                            <SaveIcon className="size-3.5" />
-                        </Button>
-                    )}
-                    <Button
-                        size="icon"
-                        variant="ghost"
-                        className="size-7 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-                        disabled={deleting}
-                        onClick={deleteTx}
-                        title="Excluir"
-                    >
-                        <Trash2Icon className="size-3.5" />
-                    </Button>
-                </div>
+                <Button
+                    size="icon"
+                    variant="ghost"
+                    className="size-7 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                    disabled={deleting}
+                    onClick={onDelete}
+                    title="Excluir"
+                >
+                    <Trash2Icon className="size-3.5" />
+                </Button>
             </td>
         </tr>
+    )
+}
+
+// ── Month rows with batch save ────────────────────────────────────
+
+interface MonthRowsProps {
+    transactions: Transaction[]
+    onSaved: () => void
+}
+
+function MonthRows({ transactions, onSaved }: MonthRowsProps) {
+    const [drafts, setDrafts] = React.useState<Record<number, Transaction>>(
+        () => Object.fromEntries(transactions.map(t => [t.id!, { ...t }]))
+    )
+    const [saving, setSaving] = React.useState(false)
+    const [deletingId, setDeletingId] = React.useState<number | null>(null)
+
+    function handleChange<K extends keyof Transaction>(id: number, field: K, value: Transaction[K]) {
+        setDrafts(prev => ({ ...prev, [id]: { ...prev[id], [field]: value } }))
+    }
+
+    const dirtyEntries = transactions.filter(
+        t => t.id != null && JSON.stringify(drafts[t.id]) !== JSON.stringify(t)
+    )
+
+    async function saveAll() {
+        setSaving(true)
+        try {
+            await Promise.all(dirtyEntries.map(t =>
+                window.electronAPI?.db.transactions.update(t.id!, {
+                    date: drafts[t.id!].date,
+                    description: drafts[t.id!].description,
+                    amount: drafts[t.id!].amount,
+                    type: drafts[t.id!].type,
+                    category: drafts[t.id!].category,
+                })
+            ))
+            toast.success(`${dirtyEntries.length} transação(ões) salva(s)`, { position: "top-center" })
+            onSaved()
+        } catch (err) {
+            toast.error(err instanceof Error ? err.message : "Erro ao salvar")
+        } finally {
+            setSaving(false)
+        }
+    }
+
+    async function handleDelete(id: number) {
+        setDeletingId(id)
+        try {
+            await window.electronAPI?.db.transactions.delete(id)
+            onSaved()
+        } catch (err) {
+            toast.error(err instanceof Error ? err.message : "Erro ao excluir")
+            setDeletingId(null)
+        }
+    }
+
+    const sorted = [...transactions].sort((a, b) => a.date.localeCompare(b.date))
+
+    return (
+        <>
+            {sorted.map(tx => (
+                <TxRow
+                    key={tx.id}
+                    draft={drafts[tx.id!] ?? tx}
+                    onChange={(field, value) => handleChange(tx.id!, field, value)}
+                    onDelete={() => handleDelete(tx.id!)}
+                    deleting={deletingId === tx.id}
+                />
+            ))}
+            {dirtyEntries.length > 0 && (
+                <tr className="bg-primary/5 border-t">
+                    <td colSpan={6} className="px-3 py-2 text-right">
+                        <Button size="sm" disabled={saving} onClick={saveAll}>
+                            <SaveIcon className="size-3.5 mr-1.5" />
+                            {saving ? "Salvando…" : `Salvar ${dirtyEntries.length} alteração(ões)`}
+                        </Button>
+                    </td>
+                </tr>
+            )}
+        </>
     )
 }
 
@@ -271,6 +303,7 @@ export default function AccountDetailPage() {
 
     const totalIncome = summaries.reduce((s, r) => s + r.income, 0)
     const totalExpense = summaries.reduce((s, r) => s + r.expense, 0)
+    const totalInvestment = summaries.reduce((s, r) => s + r.investment, 0)
     const totalCount = summaries.reduce((s, r) => s + r.count, 0)
 
     return (
@@ -294,7 +327,7 @@ export default function AccountDetailPage() {
 
             {/* Summary cards */}
             {!loading && summaries.length > 0 && (
-                <div className="grid gap-3 sm:grid-cols-3">
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                     <Card>
                         <CardHeader className="pb-1">
                             <CardDescription>Total de transações</CardDescription>
@@ -311,6 +344,12 @@ export default function AccountDetailPage() {
                         <CardHeader className="pb-1">
                             <CardDescription>Total saídas</CardDescription>
                             <CardTitle className="text-2xl text-red-600 dark:text-red-400">{fmt(totalExpense)}</CardTitle>
+                        </CardHeader>
+                    </Card>
+                    <Card>
+                        <CardHeader className="pb-1">
+                            <CardDescription>Total investimentos</CardDescription>
+                            <CardTitle className="text-2xl text-amber-600 dark:text-amber-400">{fmt(totalInvestment)}</CardTitle>
                         </CardHeader>
                     </Card>
                 </div>
@@ -338,6 +377,7 @@ export default function AccountDetailPage() {
                                         <th className="px-4 py-2.5 text-right font-medium w-16">Qtd.</th>
                                         <th className="px-4 py-2.5 text-right font-medium">Entradas</th>
                                         <th className="px-4 py-2.5 text-right font-medium">Saídas</th>
+                                        <th className="px-4 py-2.5 text-right font-medium">Investimentos</th>
                                         <th className="px-4 py-2.5 text-right font-medium">Total</th>
                                         <th className="px-4 py-2.5 w-20" />
                                     </tr>
@@ -364,6 +404,7 @@ export default function AccountDetailPage() {
                                                     <td className="px-4 py-2.5 text-right text-muted-foreground">{s.count}</td>
                                                     <td className="px-4 py-2.5 text-right text-green-600 dark:text-green-400">{fmt(s.income)}</td>
                                                     <td className="px-4 py-2.5 text-right text-red-600 dark:text-red-400">{fmt(s.expense)}</td>
+                                                    <td className="px-4 py-2.5 text-right text-amber-600 dark:text-amber-400">{fmt(s.investment)}</td>
                                                     <td className={`px-4 py-2.5 text-right font-semibold ${s.total >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
                                                         {fmt(s.total)}
                                                     </td>
@@ -384,7 +425,7 @@ export default function AccountDetailPage() {
                                                 {/* Expanded transaction rows */}
                                                 {isOpen && (
                                                     <tr className="border-b bg-muted/10">
-                                                        <td colSpan={6} className="p-0">
+                                                        <td colSpan={7} className="p-0">
                                                             <table className="w-full text-xs">
                                                                 <thead>
                                                                     <tr className="border-b bg-muted/40">
@@ -397,13 +438,7 @@ export default function AccountDetailPage() {
                                                                     </tr>
                                                                 </thead>
                                                                 <tbody>
-                                                                    {s.transactions
-                                                                        .slice()
-                                                                        .sort((a, b) => a.date.localeCompare(b.date))
-                                                                        .map((tx) => (
-                                                                            <TxRow key={tx.id} tx={tx} onSaved={load} />
-                                                                        ))
-                                                                    }
+                                                                    <MonthRows transactions={s.transactions} onSaved={load} />
                                                                 </tbody>
                                                             </table>
                                                         </td>
@@ -419,8 +454,9 @@ export default function AccountDetailPage() {
                                         <td className="px-4 py-2.5 text-right text-muted-foreground">{totalCount}</td>
                                         <td className="px-4 py-2.5 text-right text-green-600 dark:text-green-400">{fmt(totalIncome)}</td>
                                         <td className="px-4 py-2.5 text-right text-red-600 dark:text-red-400">{fmt(totalExpense)}</td>
-                                        <td className={`px-4 py-2.5 text-right font-bold ${totalIncome - totalExpense >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
-                                            {fmt(totalIncome - totalExpense)}
+                                        <td className="px-4 py-2.5 text-right text-amber-600 dark:text-amber-400">{fmt(totalInvestment)}</td>
+                                        <td className={`px-4 py-2.5 text-right font-bold ${totalIncome - totalExpense - totalInvestment >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
+                                            {fmt(totalIncome - totalExpense - totalInvestment)}
                                         </td>
                                         <td />
                                     </tr>
