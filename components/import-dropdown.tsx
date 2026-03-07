@@ -62,6 +62,63 @@ function mapCsvToTransactions(rows: Record<string, unknown>[]): Transaction[] {
     })
 }
 
+function parseOfxDate(raw: string): string {
+    // OFX date format: YYYYMMDDHHMMSS[tz] — extract just the date part
+    const m = raw.match(/^(\d{4})(\d{2})(\d{2})/)
+    if (m) return `${m[1]}-${m[2]}-${m[3]}`
+    return raw
+}
+
+function mapOfxToTransactions(data: Record<string, unknown>): Transaction[] {
+    const ofx = (data?.OFX ?? data) as Record<string, unknown>
+
+    // Support both bank (BANKMSGSRSV1) and credit-card (CREDITCARDMSGSRSV1) OFX files
+    const bankMsgs = ofx?.BANKMSGSRSV1 as Record<string, unknown> | undefined
+    const ccMsgs = ofx?.CREDITCARDMSGSRSV1 as Record<string, unknown> | undefined
+
+    const stmtrs =
+        ((bankMsgs?.STMTTRNRS as Record<string, unknown>)?.STMTRS as Record<string, unknown>) ??
+        ((ccMsgs?.CCSTMTTRNRS as Record<string, unknown>)?.CCSTMTRS as Record<string, unknown>)
+
+    if (!stmtrs) return []
+
+    const txList = (stmtrs.BANKTRANLIST as Record<string, unknown>)?.STMTTRN
+    if (!txList) return []
+
+    const txArr: Record<string, unknown>[] = Array.isArray(txList) ? txList : [txList]
+
+    return txArr.flatMap((t) => {
+        // DTPOSTED   → date  (YYYYMMDD[HHMMSS])
+        // MEMO/NAME  → description
+        // TRNAMT     → amount (sign determines type)
+        // TRNTYPE    → CREDIT=income, DEBIT=expense (fallback: sign of TRNAMT)
+        // FITID      → external_id (used for deduplication)
+        const rawDate = String(t.DTPOSTED ?? "")
+        const rawAmount = parseFloat(String(t.TRNAMT ?? "0"))
+        const trnType = String(t.TRNTYPE ?? "").toUpperCase()
+        const desc = String(t.MEMO ?? t.NAME ?? "").trim()
+        const fitid = String(t.FITID ?? "").trim()
+        if (!rawDate || !desc) return []
+
+        // CREDIT → income, DEBIT → expense; fall back to sign of TRNAMT
+        const type: "income" | "expense" =
+            trnType === "CREDIT" ? "income"
+                : trnType === "DEBIT" ? "expense"
+                    : rawAmount >= 0 ? "income" : "expense"
+
+        return [{
+            account_id: 0,
+            date: parseOfxDate(rawDate),
+            description: desc,
+            amount: Math.abs(rawAmount),
+            type,
+            category: "",
+            source: "ofx" as const,
+            external_id: fitid || undefined,
+        }]
+    })
+}
+
 const CATEGORIES = [
     "Alimentação",
     "Transporte",
@@ -247,17 +304,14 @@ export default function ImportDropdown({ defaultAccountId, defaultCreditCardId, 
         setStep("preview")
     }
 
-    async function processOfx(file: File) {
+    async function processOfxWithPreview(file: File) {
         const text = await file.text()
-        const result = await parseOfx(text) as Record<string, Record<string, unknown>>
-        const ofx = result?.OFX as Record<string, unknown> | undefined
-        const transactions: unknown[] =
-            (ofx?.BANKMSGSRSV1 as any)?.STMTTRNRS?.STMTRS?.BANKTRANLIST?.STMTTRN ?? []
-        const list = Array.isArray(transactions) ? transactions : [transactions]
-        if (list.length === 0) throw new Error("OFX válido, mas sem transações encontradas.")
-        console.log("OFX → JSON", list)
-        toast.success(`OFX convertido: ${list.length} transação(s)`, { position: "top-center" })
-        setOpen(false)
+        const parsed = await parseOfx(text)
+        const txns = mapOfxToTransactions(parsed as Record<string, unknown>)
+        if (txns.length === 0) throw new Error("Nenhuma transação encontrada no arquivo OFX.")
+        setPreviewTransactions(txns)
+        await loadAccounts()
+        setStep("preview")
     }
 
     async function onSubmit(e: React.FormEvent) {
@@ -269,7 +323,7 @@ export default function ImportDropdown({ defaultAccountId, defaultCreditCardId, 
         try {
             switch (kind) {
                 case "csv": await processCsv(file); break
-                case "ofx": await processOfx(file); break
+                case "ofx": await processOfxWithPreview(file); break
                 default:
                     toast.error("Tipo de arquivo não suportado no momento", { position: "top-center" })
             }
@@ -356,15 +410,19 @@ export default function ImportDropdown({ defaultAccountId, defaultCreditCardId, 
                     <SheetHeader>
                         <SheetTitle>
                             {kind === "pdf" && "Importar PDF"}
-                            {kind === "ofx" && "Importar OFX"}
+                            {kind === "ofx" && step === "upload" && "Importar OFX"}
+                            {kind === "ofx" && step === "preview" && "Confirmar importação"}
                             {kind === "csv" && step === "upload" && "Importar CSV"}
                             {kind === "csv" && step === "preview" && "Confirmar importação"}
                         </SheetTitle>
                         <SheetDescription>
-                            {kind === "pdf" && "Envie um arquivo PDF para processarmos."}
-                            {kind === "ofx" && "Envie um arquivo OFX (ex.: extrato) para importação."}
-                            {kind === "csv" && step === "upload" && "Envie um arquivo CSV com colunas de data, descrição e valor."}
-                            {kind === "csv" && step === "preview" && `${previewTransactions.length} transação(ões) mapeada(s). Edite os valores e categorias antes de salvar.`}
+                            <span>
+                                {kind === "pdf" && "Envie um arquivo PDF para processarmos."}
+                                {kind === "ofx" && step === "upload" && "Selecione um arquivo OFX exportado pelo seu banco (extrato eletrônico). As transações serão mapeadas automaticamente para pré-visualização."}
+                                {kind === "ofx" && step === "preview" && `${previewTransactions.length} transação(ões) encontrada(s). Edite os valores e categorias antes de salvar.`}
+                                {kind === "csv" && step === "upload" && "Envie um arquivo CSV com colunas de data, descrição e valor."}
+                                {kind === "csv" && step === "preview" && `${previewTransactions.length} transação(ões) mapeada(s). Edite os valores e categorias antes de salvar.`}
+                            </span>
                         </SheetDescription>
                     </SheetHeader>
 
