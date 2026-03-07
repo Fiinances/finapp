@@ -28,9 +28,10 @@ function fmtCurrency(v: number): string {
 
 interface CategoryExpenseChartProps {
     accountId?: number
+    creditCardIds?: number[]
 }
 
-export function CategoryExpenseChart({ accountId }: CategoryExpenseChartProps = {}) {
+export function CategoryExpenseChart({ accountId, creditCardIds }: CategoryExpenseChartProps = {}) {
     const now = new Date()
     const [year, setYear] = React.useState(now.getFullYear())
     const [month, setMonth] = React.useState(now.getMonth() + 1)
@@ -41,15 +42,27 @@ export function CategoryExpenseChart({ accountId }: CategoryExpenseChartProps = 
         async function load() {
             setLoading(true)
             try {
-                const txns = await window.electronAPI?.db.transactions.list(
+                const accountTxns = await window.electronAPI?.db.transactions.list(
                     accountId != null ? { accountId } : undefined
                 ) ?? []
-                setTransactions(txns)
+
+                const cardTxns: Transaction[] = []
+                if (creditCardIds && creditCardIds.length > 0) {
+                    const results = await Promise.all(
+                        creditCardIds.map((id) =>
+                            window.electronAPI?.db.transactions.list({ creditCardId: id }) ?? Promise.resolve([])
+                        )
+                    )
+                    for (const r of results) cardTxns.push(...(r ?? []))
+                }
+
+                setTransactions([...accountTxns, ...cardTxns])
             } catch { /* outside electron */ }
             finally { setLoading(false) }
         }
         load()
-    }, [accountId])
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [accountId, creditCardIds?.join(",")])
 
     const yearOptions = [now.getFullYear() - 2, now.getFullYear() - 1, now.getFullYear()]
     const monthPrefix = `${year}-${String(month).padStart(2, "0")}`

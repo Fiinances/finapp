@@ -463,7 +463,7 @@ export default function AccountDetailPage() {
                 <div className="flex flex-col gap-4">
                     <MonthlyIncomeExpenseChart accountId={accountId} />
                     <div className={linkedCards.length > 0 ? "grid gap-4 lg:grid-cols-2" : ""}>
-                        <CategoryExpenseChart accountId={accountId} />
+                        <CategoryExpenseChart accountId={accountId} creditCardIds={linkedCards.map((c) => c.id!)} />
                         {linkedCards.length > 0 && (
                             <CreditCardFaturaChart creditCardIds={linkedCards.map((c) => c.id!)} />
                         )}
