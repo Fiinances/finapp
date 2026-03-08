@@ -4,11 +4,6 @@ on:
   push:
     tags:
       - 'v*.*.*'
-  workflow_dispatch:
-    inputs:
-      tag:
-        description: 'Version tag (e.g. v1.0.0)'
-        required: true
 
 permissions:
   contents: write
@@ -20,7 +15,7 @@ jobs:
       matrix:
         include:
           - os: windows-latest
-            artifact_pattern: 'release/**/*.exe'
+            artifact_pattern: 'release/**/*Setup*.exe'
           - os: macos-latest
             artifact_pattern: 'release/**/*.dmg'
           - os: ubuntu-latest
@@ -29,16 +24,13 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
 
-      # better-sqlite3 requires Python and native build tools
       - name: Set up Python (Windows)
         if: runner.os == 'Windows'
         uses: actions/setup-python@v5
@@ -51,13 +43,10 @@ jobs:
       - name: Build and package
         run: npm run dist
         env:
-          # Skip macOS code signing in CI (no certificate available)
           CSC_IDENTITY_AUTO_DISCOVERY: false
-          # Required by electron-builder for GitHub publish context
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: release-${{ matrix.os }}
           path: ${{ matrix.artifact_pattern }}
@@ -68,32 +57,27 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
-          # Fetch full history so the changelog covers all commits
           fetch-depth: 0
 
-      - name: Download all build artifacts
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
           path: dist-artifacts
           merge-multiple: true
 
-      - name: List artifacts
-        run: find dist-artifacts -type f | sort
-
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.event.inputs.tag || github.ref_name }}
-          name: Finapp ${{ github.event.inputs.tag || github.ref_name }}
+          tag_name: ${{ github.ref_name }}
+          name: Finapp ${{ github.ref_name }}
           generate_release_notes: true
           draft: false
-          prerelease: ${{ contains(github.event.inputs.tag || github.ref_name, '-') }}
+          prerelease: ${{ contains(github.ref_name, '-') }}
           files: |
-            dist-artifacts/**/*.exe
+            dist-artifacts/**/*Setup*.exe
             dist-artifacts/**/*.dmg
             dist-artifacts/**/*.AppImage
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
