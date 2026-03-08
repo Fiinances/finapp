@@ -2,9 +2,7 @@
 
 import * as React from "react"
 import {
-  AudioWaveform,
   LayoutDashboard,
-  Command,
   PiggyBankIcon,
   Wallet2,
 } from "lucide-react"
@@ -20,23 +18,12 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar"
 
-// This is sample data.
 const data = {
   teams: [
     {
       name: "Finapp",
       logo: PiggyBankIcon,
       plan: "Sua carteira",
-    },
-    {
-      name: "Acme Corp.",
-      logo: AudioWaveform,
-      plan: "Startup",
-    },
-    {
-      name: "Evil Corp.",
-      logo: Command,
-      plan: "Free",
     },
   ],
   principals: [
@@ -61,7 +48,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
       <SidebarContent>
         <NavPrincipal principals={data.principals} />
-        {/* <NavMain items={data.navMain} /> */}
       </SidebarContent>
       <SidebarFooter>
         <NavSettings />

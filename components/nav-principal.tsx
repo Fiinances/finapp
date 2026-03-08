@@ -5,11 +5,9 @@ import Link from "next/link"
 
 import {
   SidebarGroup,
-  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  useSidebar,
 } from "@/components/ui/sidebar"
 
 export function NavPrincipal({
@@ -24,7 +22,6 @@ export function NavPrincipal({
 
   return (
     <SidebarGroup>
-      <SidebarGroupLabel>Principal</SidebarGroupLabel>
       <SidebarMenu>
         {principals.map((item) => (
           <SidebarMenuItem key={item.name}>
@@ -34,7 +31,6 @@ export function NavPrincipal({
                 <span>{item.name}</span>
               </Link>
             </SidebarMenuButton>
-
           </SidebarMenuItem>
         ))}
       </SidebarMenu>
