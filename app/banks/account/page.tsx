@@ -10,6 +10,7 @@ import ImportDropdown from "@/components/import-dropdown"
 import { MonthlyIncomeExpenseChart } from "@/app/dashboard/components/MonthlyIncomeExpenseChart"
 import { CategoryExpenseChart } from "@/app/dashboard/components/CategoryExpenseChart"
 import { CreditCardFaturaChart } from "@/app/dashboard/components/CreditCardFaturaChart"
+import { Suspense } from "react"
 import type { Account, Transaction, CreditCard } from "@/app/types/electron"
 
 const CATEGORIES = [
@@ -267,7 +268,7 @@ function txBillingMonth(t: Transaction): string {
 
 // ── Page ─────────────────────────────────────────────────────────
 
-export default function AccountDetailPage() {
+function AccountDetailPage() {
     const router = useRouter()
     const searchParams = useSearchParams()
     const accountId = parseInt(searchParams.get("id") ?? "0", 10)
@@ -319,6 +320,7 @@ export default function AccountDetailPage() {
         }
     }
 
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     React.useEffect(() => { load() }, [accountId])
 
     function toggleExpand(monthYear: string) {
@@ -583,5 +585,13 @@ export default function AccountDetailPage() {
                 </CardContent>
             </Card>
         </div>
+    )
+}
+
+export default function AccountDetailPageWrapper() {
+    return (
+        <Suspense>
+            <AccountDetailPage />
+        </Suspense>
     )
 }

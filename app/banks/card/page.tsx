@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ArrowLeftIcon, ChevronDownIcon, ChevronRightIcon, CreditCardIcon, SaveIcon, Trash2Icon } from "lucide-react"
 import ImportDropdown from "@/components/import-dropdown"
 import type { Account, CreditCard, Transaction } from "@/app/types/electron"
+import { Suspense } from "react"
 import { EditCreditCardSheet } from "../components/edit-credit-card-sheet"
 
 const CATEGORIES = [
@@ -282,7 +283,7 @@ function MonthRows({ transactions, onSaved }: MonthRowsProps) {
 
 // ── Page ─────────────────────────────────────────────────────────
 
-export default function CardDetailPage() {
+function CardDetailPage() {
     const router = useRouter()
     const searchParams = useSearchParams()
     const cardId = parseInt(searchParams.get("id") ?? "0", 10)
@@ -546,5 +547,13 @@ export default function CardDetailPage() {
                 onSuccess={load}
             />
         </div>
+    )
+}
+
+export default function CardDetailPageWrapper() {
+    return (
+        <Suspense>
+            <CardDetailPage />
+        </Suspense>
     )
 }
