@@ -66,6 +66,7 @@
   "build": {
     "appId": "com.finapp",
     "productName": "Finapp",
+    "icon": "public/LogoSplashScreen.ico",
     "asar": false,
     "files": [
       "electron/**/*",
@@ -85,7 +86,7 @@
       ]
     },
     "nsis": {
-      "artifactName": "${productName} Setup ${version}.${ext}",
+      "artifactName": "${productName}-Setup-${version}.${ext}",
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "deleteAppDataOnUninstall": false

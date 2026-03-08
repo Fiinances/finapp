@@ -9,6 +9,9 @@ import { Toaster } from '@/components/ui/sonner';
 export const metadata: Metadata = {
   title: 'Finapp',
   description: 'App desktop com Electron e Next.js',
+  icons: {
+    icon: '/LogoSplashScreen.png',
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode; }) {

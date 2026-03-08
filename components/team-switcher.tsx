@@ -8,7 +8,7 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
 import Link from "next/link"
-import { PiggyBankIcon } from "lucide-react"
+import Image from "next/image"
 
 export function TeamSwitcher() {
   return (
@@ -19,8 +19,8 @@ export function TeamSwitcher() {
             size="lg"
             className="cursor-pointer data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
           >
-            <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-              <PiggyBankIcon className="size-4" />
+            <div className="flex aspect-square size-8 items-center justify-center rounded-lg overflow-hidden">
+              <Image src="/LogoSplashScreen.png" alt="Finapp" width={32} height={32} className="size-8" />
             </div>
             <div className="grid flex-1 text-left text-sm leading-tight">
               <span className="truncate font-medium">Finapp</span>

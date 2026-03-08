@@ -24,6 +24,7 @@ async function createWindow() {
     height: 800,
     show: false,
     backgroundColor: '#2B2D31',
+    icon: path.join(__dirname, '..', 'public', 'LogoSplashScreen.ico'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
