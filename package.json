@@ -66,16 +66,18 @@
   "build": {
     "appId": "com.finapp",
     "productName": "Finapp",
-    "icon": "public/LogoSplashScreen.ico",
     "asar": false,
     "files": [
       "electron/**/*",
-      "out/**/*"
+      "out/**/*",
+      "public/LogoSplashScreen.png",
+      "public/LogoSplashScreen.ico"
     ],
     "directories": {
       "output": "release"
     },
     "win": {
+      "icon": "public/LogoSplashScreen.ico",
       "target": [
         {
           "target": "nsis",
@@ -92,6 +94,7 @@
       "deleteAppDataOnUninstall": false
     },
     "mac": {
+      "icon": "public/LogoSplashScreen.png",
       "target": [
         {
           "target": "dmg",
@@ -103,6 +106,7 @@
       ]
     },
     "linux": {
+      "icon": "public/LogoSplashScreen.png",
       "target": [
         {
           "target": "AppImage",
