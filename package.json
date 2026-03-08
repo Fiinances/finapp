@@ -63,7 +63,7 @@
     "wait-on": "^7.2.0"
   },
   "build": {
-    "appId": "com.electron-next-app",
+    "appId": "com.finapp",
     "productName": "Finapp",
     "files": [
       "electron/**/*",
@@ -71,6 +71,48 @@
     ],
     "directories": {
       "output": "release"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "deleteAppDataOnUninstall": false
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ]
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
     }
   }
 }

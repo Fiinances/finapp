@@ -19,13 +19,6 @@ import {
 } from "@/components/ui/sidebar"
 
 const data = {
-  teams: [
-    {
-      name: "Finapp",
-      logo: PiggyBankIcon,
-      plan: "Sua carteira",
-    },
-  ],
   principals: [
     {
       name: "Dashboard",
@@ -44,7 +37,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
-        <TeamSwitcher teams={data.teams} />
+        <TeamSwitcher />
       </SidebarHeader>
       <SidebarContent>
         <NavPrincipal principals={data.principals} />

@@ -27,7 +27,7 @@ async function createWindow() {
 
   if (isDev) {
     mainWindow.loadURL('http://localhost:3000');
-    mainWindow.webContents.openDevTools();
+    // mainWindow.webContents.openDevTools();
   } else {
     const serve = require('electron-serve');
     const loadURL = serve({ directory: path.join(__dirname, '..', 'out') });
