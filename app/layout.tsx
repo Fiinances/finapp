@@ -7,7 +7,7 @@ import { DynamicBreadcrumb } from '@/components/dynamic-breadcrumb';
 import { Toaster } from '@/components/ui/sonner';
 
 export const metadata: Metadata = {
-  title: 'Electron Next App',
+  title: 'Finapp',
   description: 'App desktop com Electron e Next.js',
 };
 

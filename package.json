@@ -1,5 +1,5 @@
 {
-  "name": "electron-next-app",
+  "name": "finapp",
   "version": "0.1.0",
   "private": true,
   "main": "electron/main.js",
@@ -64,7 +64,7 @@
   },
   "build": {
     "appId": "com.electron-next-app",
-    "productName": "Electron Next App",
+    "productName": "Finapp",
     "files": [
       "electron/**/*",
       "out/**/*"
