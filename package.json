@@ -11,6 +11,7 @@
     "start": "cross-env NODE_ENV=production electron .",
     "pack": "electron-builder --dir",
     "dist": "npm run build && electron-builder",
+    "dist:production": "cross-env NODE_ENV=production npm run build && electron-builder",
     "postinstall": "electron-rebuild -f -w better-sqlite3"
   },
   "dependencies": {
@@ -28,7 +29,7 @@
     "better-sqlite3": "^12.6.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "electron-serve": "^2.0.0",
+    "electron-serve": "^1.0.0",
     "knex": "^3.1.0",
     "lucide-react": "^0.577.0",
     "next": "^14.2.0",
@@ -65,6 +66,7 @@
   "build": {
     "appId": "com.finapp",
     "productName": "Finapp",
+    "asar": false,
     "files": [
       "electron/**/*",
       "out/**/*"
