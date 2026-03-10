@@ -4,6 +4,7 @@ import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/ca
 import { MonthlyIncomeExpenseChart } from "./components/MonthlyIncomeExpenseChart"
 import { CategoryExpenseChart } from "./components/CategoryExpenseChart"
 import { CreditCardFaturaChart } from "./components/CreditCardFaturaChart"
+import { AccountSubscriptionsCalendar } from "./components/AccountSubscriptionsCalendar"
 
 export default function Page() {
   return (
@@ -21,6 +22,9 @@ export default function Page() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <CategoryExpenseChart />
         <CreditCardFaturaChart />
+        <div className="md:col-span-2">
+          <AccountSubscriptionsCalendar />
+        </div>
       </div>
     </div>
   )

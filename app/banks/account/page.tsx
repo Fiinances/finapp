@@ -10,6 +10,7 @@ import ImportDropdown from "@/components/import-dropdown"
 import { MonthlyIncomeExpenseChart } from "@/app/dashboard/components/MonthlyIncomeExpenseChart"
 import { CategoryExpenseChart } from "@/app/dashboard/components/CategoryExpenseChart"
 import { CreditCardFaturaChart } from "@/app/dashboard/components/CreditCardFaturaChart"
+import { AccountSubscriptionsCalendar } from "@/app/dashboard/components/AccountSubscriptionsCalendar"
 import { Suspense } from "react"
 import type { Account, Transaction, CreditCard } from "@/app/types/electron"
 
@@ -513,6 +514,10 @@ function AccountDetailPage() {
                             <CreditCardFaturaChart creditCardIds={linkedCards.map((c) => c.id!)} />
                         )}
                     </div>
+                    <AccountSubscriptionsCalendar
+                        accountId={accountId}
+                        creditCardIds={linkedCards.map((c) => c.id!)}
+                    />
                 </div>
             )}
 
