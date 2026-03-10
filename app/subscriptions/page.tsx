@@ -2,7 +2,7 @@
 
 import React from "react"
 import { toast } from "sonner"
-import { Plus, Pencil, Trash2, RefreshCcw } from "lucide-react"
+import { Plus, Pencil, Trash2, RefreshCcw, ScanSearch } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -22,6 +22,7 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { SubscriptionSheet } from "./components/subscription-sheet"
+import { DetectSubscriptionsSheet } from "./components/detect-subscriptions-sheet"
 import type { Subscription, Account, CreditCard } from "@/app/types/electron"
 
 function formatBRL(value: number) {
@@ -52,6 +53,7 @@ export default function SubscriptionsPage() {
     const [creditCards, setCreditCards] = React.useState<CreditCard[]>([])
     const [sheetOpen, setSheetOpen] = React.useState(false)
     const [editing, setEditing] = React.useState<Subscription | null>(null)
+    const [detectOpen, setDetectOpen] = React.useState(false)
 
     async function loadAll() {
         const [subs, accs, cards] = await Promise.all([
@@ -128,10 +130,16 @@ export default function SubscriptionsPage() {
                     <RefreshCcw className="h-5 w-5" />
                     <h1 className="text-xl font-semibold">Assinaturas</h1>
                 </div>
-                <Button onClick={openNew} size="sm">
-                    <Plus className="mr-1 h-4 w-4" />
-                    Nova assinatura
-                </Button>
+                <div className="flex items-center gap-2">
+                    <Button variant="outline" size="sm" onClick={() => setDetectOpen(true)}>
+                        <ScanSearch className="mr-1 h-4 w-4" />
+                        Detectar
+                    </Button>
+                    <Button onClick={openNew} size="sm">
+                        <Plus className="mr-1 h-4 w-4" />
+                        Nova assinatura
+                    </Button>
+                </div>
             </div>
 
             {/* Summary cards */}
@@ -276,6 +284,12 @@ export default function SubscriptionsPage() {
                 onOpenChange={setSheetOpen}
                 onSuccess={loadAll}
                 subscription={editing}
+            />
+
+            <DetectSubscriptionsSheet
+                open={detectOpen}
+                onOpenChange={setDetectOpen}
+                onSubscriptionAdded={loadAll}
             />
         </div>
     )

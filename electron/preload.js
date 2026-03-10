@@ -43,6 +43,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
       insert: (data) => ipcRenderer.invoke('db:subscriptions:insert', data),
       update: (id, data) => ipcRenderer.invoke('db:subscriptions:update', id, data),
       delete: (id) => ipcRenderer.invoke('db:subscriptions:delete', id),
+      detect: () => ipcRenderer.invoke('db:subscriptions:detect'),
     },
   },
 });

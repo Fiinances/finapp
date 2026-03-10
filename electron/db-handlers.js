@@ -126,6 +126,25 @@ function registerDbHandlers() {
     ipcMain.handle('db:subscriptions:delete', async (_, id) => {
         return getKnex()('subscriptions').where('id', id).delete()
     })
+
+    ipcMain.handle('db:subscriptions:detect', async () => {
+        return getKnex().raw(`
+            SELECT
+                description,
+                COUNT(*)        AS occurrences,
+                AVG(amount)     AS avg_amount,
+                MIN(amount)     AS min_amount,
+                MAX(amount)     AS max_amount,
+                MIN(date)       AS first_date,
+                MAX(date)       AS last_date
+            FROM transactions
+            WHERE type = 'expense'
+            GROUP BY description
+            HAVING COUNT(*) >= 3
+               AND (MAX(amount) - MIN(amount)) / AVG(amount) < 0.05
+            ORDER BY occurrences DESC
+        `)
+    })
 }
 
 module.exports = { registerDbHandlers }

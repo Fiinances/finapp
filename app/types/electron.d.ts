@@ -36,6 +36,16 @@ export interface CreditCard {
   updated_at?: string
 }
 
+export interface RecurringTransaction {
+  description: string
+  occurrences: number
+  avg_amount: number
+  min_amount: number
+  max_amount: number
+  first_date: string
+  last_date: string
+}
+
 export interface Subscription {
   id?: number
   name: string
@@ -103,6 +113,7 @@ export interface ElectronAPI {
       insert: (data: Omit<Subscription, 'id' | 'created_at' | 'updated_at'>) => Promise<number>
       update: (id: number, data: Partial<Subscription>) => Promise<number>
       delete: (id: number) => Promise<number>
+      detect: () => Promise<RecurringTransaction[]>
     }
   }
 }
