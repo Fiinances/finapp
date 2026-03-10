@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { ArrowLeftIcon, ChevronDownIcon, ChevronRightIcon, SaveIcon, Trash2Icon, CreditCardIcon, Wand } from "lucide-react"
+import { ArrowLeftIcon, ChevronDownIcon, ChevronRightIcon, SaveIcon, Trash2Icon, CreditCardIcon, Wand, LoaderCircle } from "lucide-react"
 import ImportDropdown from "@/components/import-dropdown"
 import { MonthlyIncomeExpenseChart } from "@/app/dashboard/components/MonthlyIncomeExpenseChart"
 import { CategoryExpenseChart } from "@/app/dashboard/components/CategoryExpenseChart"
@@ -274,6 +274,7 @@ function AccountDetailPage() {
     const [loading, setLoading] = React.useState(true)
     const [expanded, setExpanded] = React.useState<Set<string>>(new Set())
     const [deletingMonth, setDeletingMonth] = React.useState<string | null>(null)
+    const [autoCategorizing, setAutoCategorizing] = React.useState<string | null>(null)
     const [linkedCards, setLinkedCards] = React.useState<CreditCard[]>([])
     const [cardSpend, setCardSpend] = React.useState<Record<number, number>>({})
 
@@ -353,6 +354,7 @@ function AccountDetailPage() {
             return
         }
 
+        setAutoCategorizing(monthYear)
         try {
             const categories = await window.electronAPI?.ai.categorize(uncategorized)
             if (categories) {
@@ -361,6 +363,8 @@ function AccountDetailPage() {
             }
         } catch (err) {
             toast.error(err instanceof Error ? err.message : "Erro ao categorizar")
+        } finally {
+            setAutoCategorizing(null)
         }
     }
 
@@ -588,9 +592,12 @@ function AccountDetailPage() {
                                                                                 type="button"
                                                                                 title="Auto categorizar usando IA"
                                                                                 onClick={() => autoCategories(s.monthYear)}
-                                                                                className="rounded cursor-pointer p-1 gap-2 text-muted-foreground hover:bg-green-500/10 transition-colors"
+                                                                                disabled={autoCategorizing === s.monthYear}
+                                                                                className="rounded cursor-pointer p-1 gap-2 text-muted-foreground hover:bg-green-500/10 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                                                                             >
-                                                                                <Wand className="size-4" />
+                                                                                {autoCategorizing === s.monthYear
+                                                                                    ? <LoaderCircle className="size-4 animate-spin" />
+                                                                                    : <Wand className="size-4" />}
                                                                             </button>
                                                                         </th>
                                                                         <th className="px-2 py-1.5 w-16" />

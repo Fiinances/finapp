@@ -18,7 +18,7 @@ import {
     SheetClose,
 } from "@/components/ui/sheet"
 import { Input } from "@/components/ui/input"
-import { InfoIcon, Trash2Icon, Wand } from "lucide-react"
+import { InfoIcon, Trash2Icon, Wand, LoaderCircle } from "lucide-react"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
 import Papa from "papaparse"
 import { parse as parseOfx } from "ofx-js"
@@ -222,6 +222,7 @@ export default function ImportDropdown({ defaultAccountId, defaultCreditCardId, 
     const [file, setFile] = React.useState<File | null>(null)
     const [loading, setLoading] = React.useState(false)
     const [saving, setSaving] = React.useState(false)
+    const [autoCategorizing, setAutoCategorizing] = React.useState(false)
     const [error, setError] = React.useState<string | null>(null)
     const [previewTransactions, setPreviewTransactions] = React.useState<Transaction[]>([])
     const [accounts, setAccounts] = React.useState<Account[]>([])
@@ -354,12 +355,17 @@ export default function ImportDropdown({ defaultAccountId, defaultCreditCardId, 
             return toast.info("Todas as transações já possuem categoria", { position: "top-center" })
         }
 
-        const categories = await window.electronAPI?.ai.categorize(previewTransactions)
-
-        if (categories) {
-            previewTransactions.map((transaction, index) => (transaction.category = categories[index]))
-            setPreviewTransactions(_ => [...previewTransactions])
-            toast.success(`${uncategorized.length} transação(ões) categorizadas`, { position: "top-center" })
+        setAutoCategorizing(true)
+        try {
+            const categories = await window.electronAPI?.ai.categorize(previewTransactions)
+            if (categories) {
+                setPreviewTransactions(prev => prev.map((t, i) => ({ ...t, category: categories[i] ?? t.category })))
+                toast.success(`${uncategorized.length} transação(ões) categorizadas`, { position: "top-center" })
+            }
+        } catch (err) {
+            toast.error(err instanceof Error ? err.message : "Erro ao categorizar")
+        } finally {
+            setAutoCategorizing(false)
         }
     }
 
@@ -574,9 +580,12 @@ export default function ImportDropdown({ defaultAccountId, defaultCreditCardId, 
                                                     type="button"
                                                     title="Auto categorizar usando IA"
                                                     onClick={() => autoCategories()}
-                                                    className="rounded cursor-pointer p-1 gap-2 text-muted-foreground hover:bg-green-500/10 transition-colors"
+                                                    disabled={autoCategorizing}
+                                                    className="rounded cursor-pointer p-1 gap-2 text-muted-foreground hover:bg-green-500/10 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                                                 >
-                                                    <Wand className="size-5" />
+                                                    {autoCategorizing
+                                                        ? <LoaderCircle className="size-5 animate-spin" />
+                                                        : <Wand className="size-5" />}
                                                 </button> </th>
                                             <th className="px-3 py-2 w-8" />
                                         </tr>
