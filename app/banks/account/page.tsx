@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { ArrowLeftIcon, ChevronDownIcon, ChevronRightIcon, SaveIcon, Trash2Icon, CreditCardIcon } from "lucide-react"
+import { ArrowLeftIcon, ChevronDownIcon, ChevronRightIcon, SaveIcon, Trash2Icon, CreditCardIcon, Wand } from "lucide-react"
 import ImportDropdown from "@/components/import-dropdown"
 import { MonthlyIncomeExpenseChart } from "@/app/dashboard/components/MonthlyIncomeExpenseChart"
 import { CategoryExpenseChart } from "@/app/dashboard/components/CategoryExpenseChart"
@@ -181,19 +181,14 @@ function TxRow({ draft, onChange, onDelete, deleting }: TxRowProps) {
 
 interface MonthRowsProps {
     transactions: Transaction[]
+    drafts: Record<number, Transaction>
+    onDraftChange: <K extends keyof Transaction>(id: number, field: K, value: Transaction[K]) => void
     onSaved: () => void
 }
 
-function MonthRows({ transactions, onSaved }: MonthRowsProps) {
-    const [drafts, setDrafts] = React.useState<Record<number, Transaction>>(
-        () => Object.fromEntries(transactions.map(t => [t.id!, { ...t }]))
-    )
+function MonthRows({ transactions, drafts, onDraftChange, onSaved }: MonthRowsProps) {
     const [saving, setSaving] = React.useState(false)
     const [deletingId, setDeletingId] = React.useState<number | null>(null)
-
-    function handleChange<K extends keyof Transaction>(id: number, field: K, value: Transaction[K]) {
-        setDrafts(prev => ({ ...prev, [id]: { ...prev[id], [field]: value } }))
-    }
 
     const dirtyEntries = transactions.filter(
         t => t.id != null && JSON.stringify(drafts[t.id]) !== JSON.stringify(t)
@@ -239,7 +234,7 @@ function MonthRows({ transactions, onSaved }: MonthRowsProps) {
                 <TxRow
                     key={tx.id}
                     draft={drafts[tx.id!] ?? tx}
-                    onChange={(field, value) => handleChange(tx.id!, field, value)}
+                    onChange={(field, value) => onDraftChange(tx.id!, field, value)}
                     onDelete={() => handleDelete(tx.id!)}
                     deleting={deletingId === tx.id}
                 />
@@ -275,11 +270,16 @@ function AccountDetailPage() {
 
     const [account, setAccount] = React.useState<Account | null>(null)
     const [summaries, setSummaries] = React.useState<MonthSummary[]>([])
+    const [drafts, setDrafts] = React.useState<Record<number, Transaction>>({})
     const [loading, setLoading] = React.useState(true)
     const [expanded, setExpanded] = React.useState<Set<string>>(new Set())
     const [deletingMonth, setDeletingMonth] = React.useState<string | null>(null)
     const [linkedCards, setLinkedCards] = React.useState<CreditCard[]>([])
     const [cardSpend, setCardSpend] = React.useState<Record<number, number>>({})
+
+    function handleDraftChange<K extends keyof Transaction>(id: number, field: K, value: Transaction[K]) {
+        setDrafts(prev => ({ ...prev, [id]: { ...prev[id], [field]: value } }))
+    }
 
     async function load() {
         if (!accountId) return
@@ -292,7 +292,9 @@ function AccountDetailPage() {
             ])
             const found = (accounts ?? []).find((a) => a.id === accountId) ?? null
             setAccount(found)
-            setSummaries(buildSummaries(accountTxns ?? []))
+            const txns = accountTxns ?? []
+            setSummaries(buildSummaries(txns))
+            setDrafts(Object.fromEntries(txns.filter(t => t.id != null).map(t => [t.id!, { ...t }])))
 
             const linked = (allCards ?? []).filter((c) => c.account_id === accountId)
             setLinkedCards(linked)
@@ -330,6 +332,28 @@ function AccountDetailPage() {
             else next.add(monthYear)
             return next
         })
+    }
+
+    async function autoCategories(monthYear: string) {
+        const transactions = summaries.find(s => s.monthYear === monthYear)?.transactions ?? []
+        const uncategorized = transactions.filter(t => !t.category && t.id != null)
+
+        if (uncategorized.length === 0) {
+            toast.info("Todas as transações deste mês já possuem categoria", { position: "top-center" })
+            return
+        }
+
+        try {
+            const categories = await window.electronAPI?.ai.categorize(uncategorized)
+            if (categories) {
+                categories.forEach((cat, i) => {
+                    handleDraftChange(uncategorized[i].id!, "category", cat)
+                })
+                toast.success(`${uncategorized.length} transação(ões) categorizadas`, { position: "top-center" })
+            }
+        } catch (err) {
+            toast.error(err instanceof Error ? err.message : "Erro ao categorizar")
+        }
     }
 
     async function handleDeleteMonth(monthYear: string, label: string) {
@@ -551,12 +575,26 @@ function AccountDetailPage() {
                                                                         <th className="px-2 py-1.5 text-left font-medium text-muted-foreground">Descrição</th>
                                                                         <th className="px-2 py-1.5 text-right font-medium text-muted-foreground w-[110px]">Valor</th>
                                                                         <th className="px-2 py-1.5 text-center font-medium text-muted-foreground w-[90px]">Tipo</th>
-                                                                        <th className="px-2 py-1.5 text-left font-medium text-muted-foreground w-[140px]">Categoria</th>
+                                                                        <th className="px-2 py-1.5 gap-2 inline-flex items-center text-left font-medium text-muted-foreground w-[140px]">Categoria
+                                                                            <button
+                                                                                type="button"
+                                                                                title="Auto categorizar usando IA"
+                                                                                onClick={() => autoCategories(s.monthYear)}
+                                                                                className="rounded cursor-pointer p-1 gap-2 text-muted-foreground hover:bg-green-500/10 transition-colors"
+                                                                            >
+                                                                                <Wand className="size-4" />
+                                                                            </button>
+                                                                        </th>
                                                                         <th className="px-2 py-1.5 w-16" />
                                                                     </tr>
                                                                 </thead>
                                                                 <tbody>
-                                                                    <MonthRows transactions={s.transactions} onSaved={load} />
+                                                                    <MonthRows
+                                                                        transactions={s.transactions}
+                                                                        drafts={drafts}
+                                                                        onDraftChange={handleDraftChange}
+                                                                        onSaved={load}
+                                                                    />
                                                                 </tbody>
                                                             </table>
                                                         </td>

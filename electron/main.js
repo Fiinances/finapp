@@ -1,6 +1,8 @@
+require('dotenv').config()
 const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 const { registerDbHandlers } = require('./db-handlers');
+const { registerLlmHandlers } = require('./llm-handlers');
 
 // app.isPackaged is true only in the distributed build — reliable unlike NODE_ENV
 const isDev = !app.isPackaged;
@@ -55,6 +57,7 @@ async function createWindow() {
 
 app.whenReady().then(() => {
   registerDbHandlers();
+  registerLlmHandlers();
   createWindow();
 });
 

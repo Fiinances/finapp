@@ -11,6 +11,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
   windowMaximize: () => ipcRenderer.send('window:maximize'),
   windowClose: () => ipcRenderer.send('window:close'),
 
+  // ── AI ──────────────────────────────────────────────────────
+  ai: {
+    categorize: (transactions) => ipcRenderer.invoke('ai:categorize', transactions),
+  },
+
   // ── Database ──────────────────────────────────────────────────
   db: {
     transactions: {

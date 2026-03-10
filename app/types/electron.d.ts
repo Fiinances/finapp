@@ -58,6 +58,9 @@ export interface ElectronAPI {
   windowMinimize?: () => void
   windowMaximize?: () => void
   windowClose?: () => void
+  ai: {
+    categorize: (transactions: Transaction[]) => Promise<string[]>
+  }
   db: {
     transactions: {
       list: (filters?: TransactionFilters) => Promise<Transaction[]>

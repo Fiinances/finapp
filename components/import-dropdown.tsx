@@ -18,7 +18,7 @@ import {
     SheetClose,
 } from "@/components/ui/sheet"
 import { Input } from "@/components/ui/input"
-import { InfoIcon, Trash2Icon } from "lucide-react"
+import { InfoIcon, Trash2Icon, Wand } from "lucide-react"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
 import Papa from "papaparse"
 import { parse as parseOfx } from "ofx-js"
@@ -348,6 +348,18 @@ export default function ImportDropdown({ defaultAccountId, defaultCreditCardId, 
         setPreviewTransactions(prev => prev.filter((_, i) => i !== index))
     }
 
+    async function autoCategories() {
+        const categories = await window.electronAPI?.ai.categorize(previewTransactions)
+
+        if (categories) {
+            categories.forEach((category, index) => {
+                if (index < previewTransactions.length) {
+                    updateRow(index, "category", category)
+                }
+            })
+        }
+    }
+
     async function confirmImport() {
         if (!accountId) {
             toast.error("Selecione uma conta ou cartão de destino")
@@ -554,7 +566,15 @@ export default function ImportDropdown({ defaultAccountId, defaultCreditCardId, 
                                             <th className="px-3 py-2 text-left font-medium">Descrição</th>
                                             <th className="px-3 py-2 text-right font-medium whitespace-nowrap">Valor</th>
                                             <th className="px-3 py-2 text-center font-medium whitespace-nowrap">Tipo</th>
-                                            <th className="px-3 py-2 text-left font-medium whitespace-nowrap">Categoria</th>
+                                            <th className="px-3 gap-3 py-2 text-left font-medium whitespace-nowrap inline-flex items-center">Categoria
+                                                <button
+                                                    type="button"
+                                                    title="Auto categorizar usando IA"
+                                                    onClick={() => autoCategories()}
+                                                    className="rounded cursor-pointer p-1 gap-2 text-muted-foreground hover:bg-green-500/10 transition-colors"
+                                                >
+                                                    <Wand className="size-5" />
+                                                </button> </th>
                                             <th className="px-3 py-2 w-8" />
                                         </tr>
                                     </thead>
