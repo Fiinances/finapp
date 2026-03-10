@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { ArrowLeftIcon, ChevronDownIcon, ChevronRightIcon, CreditCardIcon, SaveIcon, Trash2Icon } from "lucide-react"
+import { ArrowLeftIcon, ChevronDownIcon, ChevronRightIcon, CreditCardIcon, SaveIcon, Trash2Icon, Wand } from "lucide-react"
 import ImportDropdown from "@/components/import-dropdown"
 import type { Account, CreditCard, Transaction } from "@/app/types/electron"
 import { Suspense } from "react"
@@ -192,19 +192,14 @@ function TxRow({ draft, onChange, onDelete, deleting }: TxRowProps) {
 
 interface MonthRowsProps {
     transactions: Transaction[]
+    drafts: Record<number, Transaction>
+    onDraftChange: <K extends keyof Transaction>(id: number, field: K, value: Transaction[K]) => void
     onSaved: () => void
 }
 
-function MonthRows({ transactions, onSaved }: MonthRowsProps) {
-    const [drafts, setDrafts] = React.useState<Record<number, Transaction>>(
-        () => Object.fromEntries(transactions.map(t => [t.id!, { ...t }]))
-    )
+function MonthRows({ transactions, drafts, onDraftChange, onSaved }: MonthRowsProps) {
     const [saving, setSaving] = React.useState(false)
     const [deletingId, setDeletingId] = React.useState<number | null>(null)
-
-    function handleChange<K extends keyof Transaction>(id: number, field: K, value: Transaction[K]) {
-        setDrafts(prev => ({ ...prev, [id]: { ...prev[id], [field]: value } }))
-    }
 
     const dirtyEntries = transactions.filter(
         t => t.id != null && JSON.stringify(drafts[t.id]) !== JSON.stringify(t)
@@ -262,7 +257,7 @@ function MonthRows({ transactions, onSaved }: MonthRowsProps) {
                 <TxRow
                     key={tx.id}
                     draft={drafts[tx.id!] ?? tx}
-                    onChange={(field, value) => handleChange(tx.id!, field, value)}
+                    onChange={(field, value) => onDraftChange(tx.id!, field, value)}
                     onDelete={() => handleDelete(tx.id!)}
                     deleting={deletingId === tx.id}
                 />
@@ -291,10 +286,25 @@ function CardDetailPage() {
     const [card, setCard] = React.useState<CreditCard | null>(null)
     const [linkedAccount, setLinkedAccount] = React.useState<Account | null>(null)
     const [summaries, setSummaries] = React.useState<MonthSummary[]>([])
+    const [drafts, setDrafts] = React.useState<Record<number, Transaction>>({})
     const [loading, setLoading] = React.useState(true)
     const [expanded, setExpanded] = React.useState<Set<string>>(new Set())
     const [deletingMonth, setDeletingMonth] = React.useState<string | null>(null)
     const [editOpen, setEditOpen] = React.useState(false)
+
+    function handleDraftChange<K extends keyof Transaction>(id: number, field: K, value: Transaction[K]) {
+        setDrafts(prev => ({ ...prev, [id]: { ...prev[id], [field]: value } }))
+    }
+
+    function onBatchDrafts(drafts: Record<number, Transaction>, updates: Transaction[], field: string, update: (string | null)[]) {
+        const novosDrafts = { ...drafts }
+        updates.forEach((t, i) => {
+            if (t.id != null && update[i]) {
+                novosDrafts[t.id] = { ...novosDrafts[t.id], [field]: update[i] }
+            }
+        })
+        return novosDrafts
+    }
 
     async function load() {
         if (!cardId) return
@@ -311,7 +321,9 @@ function CardDetailPage() {
                 const acc = (accounts ?? []).find(a => a.id === found.account_id) ?? null
                 setLinkedAccount(acc)
             }
-            setSummaries(buildSummaries(transactions ?? []))
+            const txns = transactions ?? []
+            setSummaries(buildSummaries(txns))
+            setDrafts(Object.fromEntries(txns.filter(t => t.id != null).map(t => [t.id!, { ...t }])))
         } catch {
             // outside electron
         } finally {
@@ -328,6 +340,26 @@ function CardDetailPage() {
             else next.add(monthYear)
             return next
         })
+    }
+
+    async function autoCategories(monthYear: string) {
+        const transactions = summaries.find(s => s.monthYear === monthYear)?.transactions ?? []
+        const uncategorized = transactions.filter(t => !t.category && t.id != null)
+
+        if (uncategorized.length === 0) {
+            toast.info("Todas as transações desta fatura já possuem categoria", { position: "top-center" })
+            return
+        }
+
+        try {
+            const categories = await window.electronAPI?.ai.categorize(uncategorized)
+            if (categories) {
+                setDrafts(prev => onBatchDrafts(prev, uncategorized, "category", categories))
+                toast.success(`${uncategorized.length} transação(ões) categorizadas`, { position: "top-center" })
+            }
+        } catch (err) {
+            toast.error(err instanceof Error ? err.message : "Erro ao categorizar")
+        }
     }
 
     async function handleDeleteMonth(monthYear: string, label: string) {
@@ -507,13 +539,29 @@ function CardDetailPage() {
                                                                         <th className="px-2 py-1.5 text-left font-medium text-muted-foreground">Descrição</th>
                                                                         <th className="px-2 py-1.5 text-right font-medium text-muted-foreground w-[110px]">Valor</th>
                                                                         <th className="px-2 py-1.5 text-center font-medium text-muted-foreground w-[90px]">Tipo</th>
-                                                                        <th className="px-2 py-1.5 text-left font-medium text-muted-foreground w-[140px]">Categoria</th>
+                                                                        <th className="px-2 gap-2 inline-flex items-center py-1.5 text-left font-medium text-muted-foreground w-[140px]">Categoria
+                                                                            <button
+                                                                                type="button"
+                                                                                title="Auto categorizar usando IA"
+                                                                                onClick={() => autoCategories(s.monthYear)}
+                                                                                className="rounded cursor-pointer p-1 gap-2 text-muted-foreground hover:bg-green-500/10 transition-colors"
+                                                                            >
+                                                                                <Wand className="size-4" />
+                                                                            </button>
+
+
+                                                                        </th>
                                                                         <th className="px-2 py-1.5 text-left font-medium text-muted-foreground w-[100px]">Mês da fatura</th>
                                                                         <th className="px-2 py-1.5 w-16" />
                                                                     </tr>
                                                                 </thead>
                                                                 <tbody>
-                                                                    <MonthRows transactions={s.transactions} onSaved={load} />
+                                                                    <MonthRows
+                                                                        transactions={s.transactions}
+                                                                        drafts={drafts}
+                                                                        onDraftChange={handleDraftChange}
+                                                                        onSaved={load}
+                                                                    />
                                                                 </tbody>
                                                             </table>
                                                         </td>

@@ -281,6 +281,16 @@ function AccountDetailPage() {
         setDrafts(prev => ({ ...prev, [id]: { ...prev[id], [field]: value } }))
     }
 
+    function onBatchDrafts(drafts: Record<number, Transaction>, updates: Transaction[], field: string, update: (string | null)[]) {
+        const novosDrafts = { ...drafts }
+        updates.forEach((t, i) => {
+            if (t.id != null && update[i]) {
+                novosDrafts[t.id] = { ...novosDrafts[t.id], [field]: update[i] }
+            }
+        })
+        return novosDrafts
+    }
+
     async function load() {
         if (!accountId) return
         setLoading(true)
@@ -346,9 +356,7 @@ function AccountDetailPage() {
         try {
             const categories = await window.electronAPI?.ai.categorize(uncategorized)
             if (categories) {
-                categories.forEach((cat, i) => {
-                    handleDraftChange(uncategorized[i].id!, "category", cat)
-                })
+                setDrafts(prev => onBatchDrafts(prev, uncategorized, "category", categories))
                 toast.success(`${uncategorized.length} transação(ões) categorizadas`, { position: "top-center" })
             }
         } catch (err) {

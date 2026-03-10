@@ -349,14 +349,17 @@ export default function ImportDropdown({ defaultAccountId, defaultCreditCardId, 
     }
 
     async function autoCategories() {
+        const uncategorized = previewTransactions.filter(t => !t.category)
+        if (uncategorized.length === 0) {
+            return toast.info("Todas as transações já possuem categoria", { position: "top-center" })
+        }
+
         const categories = await window.electronAPI?.ai.categorize(previewTransactions)
 
         if (categories) {
-            categories.forEach((category, index) => {
-                if (index < previewTransactions.length) {
-                    updateRow(index, "category", category)
-                }
-            })
+            previewTransactions.map((transaction, index) => (transaction.category = categories[index]))
+            setPreviewTransactions(_ => [...previewTransactions])
+            toast.success(`${uncategorized.length} transação(ões) categorizadas`, { position: "top-center" })
         }
     }
 
