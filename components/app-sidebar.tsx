@@ -4,6 +4,7 @@ import * as React from "react"
 import {
   LayoutDashboard,
   PiggyBankIcon,
+  RefreshCcw,
   Wallet2,
 } from "lucide-react"
 
@@ -29,7 +30,12 @@ const data = {
       name: "Bancos",
       url: "/banks",
       icon: Wallet2,
-    }
+    },
+    {
+      name: "Assinaturas",
+      url: "/subscriptions",
+      icon: RefreshCcw,
+    },
   ],
 }
 

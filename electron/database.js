@@ -71,6 +71,24 @@ async function migrate() {
             t.timestamps(true, true)
         })
     }
+
+    const hasSubscriptions = await db.schema.hasTable('subscriptions')
+    if (!hasSubscriptions) {
+        await db.schema.createTable('subscriptions', (t) => {
+            t.increments('id').primary()
+            t.string('name').notNullable()
+            t.decimal('amount', 15, 2).notNullable()
+            t.enu('type', ['expense', 'income']).defaultTo('expense')
+            t.enu('period', ['weekly', 'monthly', 'yearly']).defaultTo('monthly')
+            t.string('next_due').nullable()         // YYYY-MM-DD
+            t.string('category').nullable()
+            t.string('color').nullable()
+            t.integer('account_id').references('id').inTable('accounts').onDelete('SET NULL').nullable()
+            t.integer('credit_card_id').references('id').inTable('credit_cards').onDelete('SET NULL').nullable()
+            t.integer('active').defaultTo(1)
+            t.timestamps(true, true)
+        })
+    }
 }
 
 module.exports = { getKnex, migrate }

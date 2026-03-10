@@ -107,6 +107,25 @@ function registerDbHandlers() {
             })
             .delete()
     })
+
+    // ── Subscriptions ─────────────────────────────────────────────
+
+    ipcMain.handle('db:subscriptions:list', async () => {
+        return getKnex()('subscriptions').orderBy('name')
+    })
+
+    ipcMain.handle('db:subscriptions:insert', async (_, data) => {
+        const [id] = await getKnex()('subscriptions').insert(data)
+        return id
+    })
+
+    ipcMain.handle('db:subscriptions:update', async (_, id, data) => {
+        return getKnex()('subscriptions').where('id', id).update(data)
+    })
+
+    ipcMain.handle('db:subscriptions:delete', async (_, id) => {
+        return getKnex()('subscriptions').where('id', id).delete()
+    })
 }
 
 module.exports = { registerDbHandlers }

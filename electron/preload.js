@@ -38,6 +38,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
       delete: (id) => ipcRenderer.invoke('db:creditCards:delete', id),
       deleteByMonth: (creditCardId, monthYear) => ipcRenderer.invoke('db:creditCards:deleteByMonth', creditCardId, monthYear),
     },
+    subscriptions: {
+      list: () => ipcRenderer.invoke('db:subscriptions:list'),
+      insert: (data) => ipcRenderer.invoke('db:subscriptions:insert', data),
+      update: (id, data) => ipcRenderer.invoke('db:subscriptions:update', id, data),
+      delete: (id) => ipcRenderer.invoke('db:subscriptions:delete', id),
+    },
   },
 });
 

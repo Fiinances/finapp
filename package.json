@@ -41,6 +41,7 @@
     "pdf-parse": "^1.1.1",
     "pdfjs-dist": "^2.16.105",
     "postcss": "^8.5.8",
+    "radix-ui": "^1.4.3",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "recharts": "^2.15.4",
