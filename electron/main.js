@@ -1,6 +1,10 @@
-require('dotenv').config()
-const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
+const { app, BrowserWindow, ipcMain } = require('electron');
+
+const envPath = app.isPackaged
+  ? path.join(process.resourcesPath, '.env')
+  : path.join(__dirname, '.env');
+require('dotenv').config({ path: envPath });
 const { registerDbHandlers } = require('./db-handlers');
 const { registerLlmHandlers } = require('./llm-handlers');
 

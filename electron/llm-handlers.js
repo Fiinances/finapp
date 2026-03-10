@@ -1,10 +1,14 @@
 const { ipcMain } = require('electron')
 const { Groq } = require('groq-sdk');
 
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+let groq;
+function getGroq() {
+    if (!groq) groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+    return groq;
+}
 
 async function categorizeTransactions(_, transactions) {
-    const chatCompletion = await groq.chat.completions.create({
+    const chatCompletion = await getGroq().chat.completions.create({
         "messages": [
             {
                 "role": "system",
