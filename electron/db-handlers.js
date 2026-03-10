@@ -42,8 +42,7 @@ function registerDbHandlers() {
 
     ipcMain.handle('db:transactions:deleteByMonth', async (_, accountId, monthYear) => {
         // monthYear = 'MM/YYYY'
-        // Handles both ISO dates (YYYY-MM-DD) via strftime and Brazilian dates (DD/MM/YYYY) via SUBSTR
-        console.log('Deleting transactions for account', accountId, 'month', monthYear)
+        // strftime matches YYYY-MM-DD (standard); SUBSTR fallback for legacy DD/MM/YYYY records
         return getKnex()('transactions')
             .where('account_id', accountId)
             .whereRaw(

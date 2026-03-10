@@ -52,7 +52,7 @@ function mapCsvToTransactions(rows: Record<string, unknown>[]): Transaction[] {
 
         return [{
             account_id: 0,
-            date: rawDate,
+            date: normalizeDateToISO(rawDate),
             description: rawDesc,
             amount: Math.abs(rawAmount),
             type: (rawAmount >= 0 ? "income" : "expense") as "income" | "expense",
@@ -66,6 +66,17 @@ function parseOfxDate(raw: string): string {
     // OFX date format: YYYYMMDDHHMMSS[tz] — extract just the date part
     const m = raw.match(/^(\d{4})(\d{2})(\d{2})/)
     if (m) return `${m[1]}-${m[2]}-${m[3]}`
+    return raw
+}
+
+function normalizeDateToISO(raw: string): string {
+    // DD/MM/YYYY → YYYY-MM-DD
+    let m = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
+    if (m) return `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`
+    // DD-MM-YYYY → YYYY-MM-DD
+    m = raw.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/)
+    if (m) return `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`
+    // Already YYYY-MM-DD or unrecognized — return as-is
     return raw
 }
 

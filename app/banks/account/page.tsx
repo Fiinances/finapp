@@ -37,6 +37,13 @@ function formatDate(date: string): string {
     return date
 }
 
+function parseDateToISO(date: string): string {
+    // DD/MM/YYYY → YYYY-MM-DD
+    const m = date.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
+    if (m) return `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`
+    return date
+}
+
 interface MonthSummary {
     monthYear: string   // 'MM/YYYY'
     label: string
@@ -199,7 +206,7 @@ function MonthRows({ transactions, drafts, onDraftChange, onSaved }: MonthRowsPr
         try {
             await Promise.all(dirtyEntries.map(t =>
                 window.electronAPI?.db.transactions.update(t.id!, {
-                    date: drafts[t.id!].date,
+                    date: parseDateToISO(drafts[t.id!].date),
                     description: drafts[t.id!].description,
                     amount: drafts[t.id!].amount,
                     type: drafts[t.id!].type,
