@@ -11,7 +11,7 @@
     "start": "cross-env NODE_ENV=production electron .",
     "pack": "electron-builder --dir",
     "dist": "npm run build && electron-builder",
-    "dist:production": "cross-env NODE_ENV=production npm run build && electron-builder",
+    "dist:production": "npm run build && node electron/generate-config.js && electron-builder",
     "postinstall": "electron-rebuild -f -w better-sqlite3"
   },
   "dependencies": {
