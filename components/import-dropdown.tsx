@@ -25,7 +25,7 @@ import { parse as parseOfx } from "ofx-js"
 import { toast } from "sonner"
 import type { Account, CreditCard, Transaction } from "@/app/types/electron"
 
-type ImportKind = "pdf" | "ofx" | "csv" | null
+type ImportKind = "ofx" | "csv" | null
 type ImportStep = "upload" | "preview"
 
 function findCol(headers: string[], ...candidates: string[]): string | undefined {
@@ -336,8 +336,6 @@ export default function ImportDropdown({ defaultAccountId, defaultCreditCardId, 
             switch (kind) {
                 case "csv": await processCsv(file); break
                 case "ofx": await processOfxWithPreview(file); break
-                default:
-                    toast.error("Tipo de arquivo não suportado no momento", { position: "top-center" })
             }
         } catch (err) {
             const msg = err instanceof Error ? err.message : String(err)
@@ -427,7 +425,6 @@ export default function ImportDropdown({ defaultAccountId, defaultCreditCardId, 
                     <Button variant="secondary">Importar</Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
-                    <DropdownMenuItem onSelect={() => openFor("pdf")}>Importar PDF</DropdownMenuItem>
                     <DropdownMenuItem onSelect={() => openFor("ofx")}>Importar OFX</DropdownMenuItem>
                     <DropdownMenuItem onSelect={() => openFor("csv")}>Importar CSV</DropdownMenuItem>
                 </DropdownMenuContent>
@@ -441,7 +438,6 @@ export default function ImportDropdown({ defaultAccountId, defaultCreditCardId, 
                 >
                     <SheetHeader>
                         <SheetTitle>
-                            {kind === "pdf" && "Importar PDF"}
                             {kind === "ofx" && step === "upload" && "Importar OFX"}
                             {kind === "ofx" && step === "preview" && "Confirmar importação"}
                             {kind === "csv" && step === "upload" && "Importar CSV"}
@@ -449,7 +445,6 @@ export default function ImportDropdown({ defaultAccountId, defaultCreditCardId, 
                         </SheetTitle>
                         <SheetDescription>
                             <span>
-                                {kind === "pdf" && "Envie um arquivo PDF para processarmos."}
                                 {kind === "ofx" && step === "upload" && "Selecione um arquivo OFX exportado pelo seu banco (extrato eletrônico). As transações serão mapeadas automaticamente para pré-visualização."}
                                 {kind === "ofx" && step === "preview" && `${previewTransactions.length} transação(ões) encontrada(s). Edite os valores e categorias antes de salvar.`}
                                 {kind === "csv" && step === "upload" && "Envie um arquivo CSV com colunas de data, descrição e valor."}
@@ -464,7 +459,7 @@ export default function ImportDropdown({ defaultAccountId, defaultCreditCardId, 
                                 <label className="block text-sm font-medium mb-1">Arquivo</label>
                                 <Input
                                     type="file"
-                                    accept={kind === "pdf" ? "application/pdf" : kind === "csv" ? ".csv,text/csv" : ".ofx,application/octet-stream"}
+                                    accept={kind === "csv" ? ".csv,text/csv" : ".ofx,application/octet-stream"}
                                     onChange={onFileChange}
                                 />
                                 {fileName && (
@@ -500,19 +495,6 @@ export default function ImportDropdown({ defaultAccountId, defaultCreditCardId, 
                                         </p>
                                     </AlertDescription>
                                 </Alert>
-                            )}
-
-                            {kind === "pdf" && (
-                                <>
-                                    <div>
-                                        <label className="block text-sm font-medium mb-1">Título</label>
-                                        <Input type="text" placeholder="Título (opcional)" />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium mb-1">Descrição</label>
-                                        <textarea className="w-full rounded-md border border-input px-3 py-2 text-sm" rows={4} />
-                                    </div>
-                                </>
                             )}
 
                             {error && <p className="text-xs text-destructive">{error}</p>}

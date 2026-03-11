@@ -15,7 +15,6 @@ const LABELS: Record<string, string> = {
     banks: "Bancos",
     account: "Conta",
     card: "Cartão",
-    "import-pdf": "Importar PDF",
 }
 
 function segmentLabel(segment: string): string {
