@@ -6,8 +6,9 @@ on:
       - 'v*.*.*'
   workflow_dispatch:
 
+# Permissions only for the private source repo (read is enough here)
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build:
@@ -46,7 +47,8 @@ jobs:
           npm run dist:production
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # GH_TOKEN here authorizes electron-builder to publish to finapp_releases
+          GH_TOKEN: ${{ secrets.RELEASES_PAT }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
 
       - uses: actions/upload-artifact@v4
@@ -63,21 +65,18 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
       - uses: actions/download-artifact@v4
         with:
           path: dist-artifacts
           merge-multiple: true
 
-      - name: Create GitHub Release
+      - name: Create GitHub Release on public repo
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           name: Finapp ${{ github.ref_name }}
-          generate_release_notes: true
+          repository: Fiinances/finapp_releases
+          generate_release_notes: false
           draft: false
           prerelease: ${{ contains(github.ref_name, '-') }}
           files: |
@@ -87,5 +86,5 @@ jobs:
             dist-artifacts/**/*.blockmap
             dist-artifacts/**/latest*.yml
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.RELEASES_PAT }}
 

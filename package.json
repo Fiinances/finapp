@@ -121,7 +121,7 @@
     "publish": {
       "provider": "github",
       "owner": "Fiinances",
-      "repo": "https://github.com/Fiinances/finapp"
+      "repo": "finapp_releases"
     }
   }
 }
