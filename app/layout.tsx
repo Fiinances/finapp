@@ -5,6 +5,7 @@ import { Separator } from '@radix-ui/react-separator';
 import { AppSidebar } from '@/components/app-sidebar';
 import { DynamicBreadcrumb } from '@/components/dynamic-breadcrumb';
 import { Toaster } from '@/components/ui/sonner';
+import { UpdateNotifier } from '@/components/update-notifier';
 
 export const metadata: Metadata = {
   title: 'Finapp',
@@ -23,6 +24,7 @@ export default function RootLayout({ children }: { children: React.ReactNode; })
       <body>
         <SidebarProvider>
           <Toaster />
+          <UpdateNotifier />
           <AppSidebar />
 
           <SidebarInset>

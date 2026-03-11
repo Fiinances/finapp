@@ -1,5 +1,6 @@
 const path = require('path');
 const { app, BrowserWindow, ipcMain } = require('electron');
+const { autoUpdater } = require('electron-updater');
 
 try {
   const config = require('./runtime-config');
@@ -58,12 +59,50 @@ async function createWindow() {
     else mainWindow.maximize();
   });
   ipcMain.on('window:close', () => mainWindow.close());
+
+  return mainWindow;
+}
+
+function setupAutoUpdater(mainWindow) {
+  if (isDev) return; // auto-updates are only for production builds
+  // if (isDev) {
+  //   autoUpdater.forceDevUpdateConfig = true;
+  // };
+
+  autoUpdater.autoDownload = false;
+  autoUpdater.autoInstallOnAppQuit = false;
+
+  autoUpdater.on('update-available', (info) => {
+    mainWindow.webContents.send('updater:available', info);
+  });
+
+  autoUpdater.on('update-downloaded', (info) => {
+    mainWindow.webContents.send('updater:downloaded', info);
+  });
+
+  autoUpdater.on('error', (err) => {
+    console.error('[auto-updater]', err.message);
+  });
+
+  ipcMain.handle('updater:download', () => {
+    autoUpdater.downloadUpdate().catch((err) => {
+      console.error('[auto-updater] downloadUpdate failed:', err.message);
+    });
+  });
+
+  ipcMain.handle('updater:install', () => {
+    autoUpdater.quitAndInstall();
+  });
+
+  autoUpdater.checkForUpdates().catch((err) => {
+    console.error('[auto-updater] checkForUpdates failed:', err.message);
+  });
 }
 
 app.whenReady().then(() => {
   registerDbHandlers();
   registerLlmHandlers();
-  createWindow();
+  createWindow().then((win) => setupAutoUpdater(win));
 });
 
 app.on('window-all-closed', () => {

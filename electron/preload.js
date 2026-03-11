@@ -11,6 +11,20 @@ contextBridge.exposeInMainWorld('electronAPI', {
   windowMaximize: () => ipcRenderer.send('window:maximize'),
   windowClose: () => ipcRenderer.send('window:close'),
 
+  // ── Updater ─────────────────────────────────────────────────
+  updater: {
+    onAvailable: (cb) => {
+      ipcRenderer.removeAllListeners('updater:available')
+      ipcRenderer.on('updater:available', (_, info) => cb(info))
+    },
+    onDownloaded: (cb) => {
+      ipcRenderer.removeAllListeners('updater:downloaded')
+      ipcRenderer.on('updater:downloaded', (_, info) => cb(info))
+    },
+    download: () => ipcRenderer.invoke('updater:download'),
+    install: () => ipcRenderer.invoke('updater:install'),
+  },
+
   // ── AI ──────────────────────────────────────────────────────
   ai: {
     categorize: (transactions) => ipcRenderer.invoke('ai:categorize', transactions),

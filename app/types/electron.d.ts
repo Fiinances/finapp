@@ -84,6 +84,12 @@ export interface ElectronAPI {
   windowMinimize?: () => void
   windowMaximize?: () => void
   windowClose?: () => void
+  updater?: {
+    onAvailable: (cb: (info: { version: string }) => void) => void
+    onDownloaded: (cb: (info: { version: string }) => void) => void
+    download: () => Promise<void>
+    install: () => Promise<void>
+  }
   ai: {
     categorize: (transactions: Transaction[]) => Promise<string[]>
   }

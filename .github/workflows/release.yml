@@ -52,7 +52,10 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: release-${{ matrix.os }}
-          path: ${{ matrix.artifact_pattern }}
+          path: |
+            ${{ matrix.artifact_pattern }}
+            release/**/*.blockmap
+            release/**/latest*.yml
           if-no-files-found: warn
 
   release:
@@ -81,6 +84,8 @@ jobs:
             dist-artifacts/**/*Setup*.exe
             dist-artifacts/**/*.dmg
             dist-artifacts/**/*.AppImage
+            dist-artifacts/**/*.blockmap
+            dist-artifacts/**/latest*.yml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
