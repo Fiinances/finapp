@@ -10,6 +10,8 @@ export interface Transaction {
   source?: 'manual' | 'csv' | 'ofx'
   external_id?: string
   billing_month?: string | null
+  installment_group_id?: number | null
+  installment_number?: number | null
   created_at?: string
   updated_at?: string
 }
@@ -34,6 +36,40 @@ export interface CreditCard {
   due_day?: number
   created_at?: string
   updated_at?: string
+}
+
+export interface InstallmentGroup {
+  id?: number
+  credit_card_id: number
+  description: string
+  total_amount: number
+  installments: number
+  first_billing_month: string // MM/YYYY
+  category?: string | null
+  // computed by backend
+  paid_installments?: number
+  remaining_installments?: number
+  real_paid_installments?: number
+  real_remaining_installments?: number
+  real_paid_amount?: number
+  real_remaining_amount?: number
+  created_at?: string
+  updated_at?: string
+}
+
+export interface InstallmentGroupFilters {
+  creditCardId?: number
+}
+
+export interface DetectedInstallment {
+  credit_card_id: number
+  base_description: string
+  total_installments: number
+  installment_amount: number
+  total_amount: number
+  first_billing_month: string
+  occurrences: number
+  transactions: Array<{ id: number; installment_number: number }>
 }
 
 export interface RecurringTransaction {
@@ -120,6 +156,13 @@ export interface ElectronAPI {
       update: (id: number, data: Partial<Subscription>) => Promise<number>
       delete: (id: number) => Promise<number>
       detect: () => Promise<RecurringTransaction[]>
+    }
+    installmentGroups: {
+      list: (filters?: InstallmentGroupFilters) => Promise<InstallmentGroup[]>
+      insert: (data: Omit<InstallmentGroup, 'id' | 'paid_installments' | 'remaining_installments' | 'created_at' | 'updated_at'>) => Promise<number>
+      update: (id: number, data: Partial<InstallmentGroup>) => Promise<number>
+      delete: (id: number) => Promise<number>
+      detect: () => Promise<DetectedInstallment[]>
     }
   }
 }

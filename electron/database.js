@@ -53,6 +53,20 @@ async function migrate() {
         })
     }
 
+    const hasInstallmentGroups = await db.schema.hasTable('installment_groups')
+    if (!hasInstallmentGroups) {
+        await db.schema.createTable('installment_groups', (t) => {
+            t.increments('id').primary()
+            t.integer('credit_card_id').references('id').inTable('credit_cards').onDelete('CASCADE').notNullable()
+            t.string('description').notNullable()           // nome base da compra
+            t.decimal('total_amount', 15, 2).notNullable()  // valor total da compra
+            t.integer('installments').notNullable()         // total de parcelas
+            t.string('first_billing_month').notNullable()   // MM/YYYY — mês da 1ª parcela
+            t.string('category').nullable()
+            t.timestamps(true, true)
+        })
+    }
+
     const hasTransactions = await db.schema.hasTable('transactions')
 
     if (!hasTransactions) {
@@ -68,6 +82,8 @@ async function migrate() {
             t.enu('source', ['manual', 'csv', 'ofx']).defaultTo('manual')
             t.string('external_id') // OFX FITID — evita duplicatas
             t.string('billing_month').nullable() // MM/YYYY — mes de fatura do cartao
+            t.integer('installment_group_id').references('id').inTable('installment_groups').onDelete('SET NULL').nullable()
+            t.integer('installment_number').nullable() // parcela atual (ex: 3)
             t.timestamps(true, true)
         })
     }
@@ -91,13 +107,21 @@ async function migrate() {
                     source VARCHAR(255) CHECK(source IN ('manual','csv','ofx')) DEFAULT 'manual',
                     external_id VARCHAR(255),
                     billing_month VARCHAR(255),
+                    installment_group_id INTEGER REFERENCES installment_groups(id) ON DELETE SET NULL,
+                    installment_number INTEGER,
                     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
                 )
             `)
-            await db.raw('INSERT INTO transactions_new SELECT * FROM transactions')
+            await db.raw('INSERT INTO transactions_new SELECT *, NULL, NULL FROM transactions')
             await db.raw('DROP TABLE transactions')
             await db.raw('ALTER TABLE transactions_new RENAME TO transactions')
+        } else if (sql && !sql.includes('installment_group_id')) {
+            // Already has card_payment but not installment columns
+            await db.schema.table('transactions', (t) => {
+                t.integer('installment_group_id').nullable()
+                t.integer('installment_number').nullable()
+            })
         }
     }
 

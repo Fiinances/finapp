@@ -121,12 +121,19 @@ function TxRow({ draft, onChange, onDelete, deleting }: TxRowProps) {
                 />
             </td>
             <td className={cellCls}>
-                <input
-                    type="text"
-                    value={draft.description}
-                    onChange={(e) => onChange("description", e.target.value)}
-                    className={`${inputCls} min-w-[160px]`}
-                />
+                <div className="flex items-center gap-1.5">
+                    <input
+                        type="text"
+                        value={draft.description}
+                        onChange={(e) => onChange("description", e.target.value)}
+                        className={`${inputCls} min-w-[160px]`}
+                    />
+                    {draft.installment_number != null && (
+                        <span className="shrink-0 rounded-full bg-violet-100 px-1.5 py-0.5 text-[10px] font-semibold text-violet-700 dark:bg-violet-900/30 dark:text-violet-400 whitespace-nowrap">
+                            {draft.installment_number}x
+                        </span>
+                    )}
+                </div>
             </td>
             <td className={cellCls}>
                 <input

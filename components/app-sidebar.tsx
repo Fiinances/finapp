@@ -6,6 +6,7 @@ import {
   PiggyBankIcon,
   RefreshCcw,
   Wallet2,
+  SplitSquareVertical,
 } from "lucide-react"
 
 import { NavPrincipal } from "@/components/nav-principal"
@@ -35,6 +36,11 @@ const data = {
       name: "Assinaturas",
       url: "/subscriptions",
       icon: RefreshCcw,
+    },
+    {
+      name: "Parcelamentos",
+      url: "/installments",
+      icon: SplitSquareVertical,
     },
   ],
 }

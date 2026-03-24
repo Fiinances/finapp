@@ -58,6 +58,7 @@ function mapCsvToTransactions(rows: Record<string, unknown>[]): Transaction[] {
 
         if (!rawDate || !rawDesc) return []
 
+        const installment = detectInstallment(rawDesc)
         return [{
             account_id: 0,
             date: normalizeDateToISO(rawDate),
@@ -66,8 +67,22 @@ function mapCsvToTransactions(rows: Record<string, unknown>[]): Transaction[] {
             type: (rawAmount >= 0 ? "income" : "expense") as "income" | "expense",
             category: "",
             source: "csv" as const,
+            installment_number: installment?.current ?? null,
+            // installment_group_id linked after import in installments page
         }]
     })
+}
+
+// Detects installment pattern in description.
+// Returns { current, total } or null.
+// Matches: "3/12", "03/12", "3 DE 12", "PARC 03/12", "PARCELA 3/12", "3-12"
+function detectInstallment(desc: string): { current: number; total: number } | null {
+    const m = desc.match(/\b(\d{1,2})\s*(?:\/|-|de)\s*(\d{1,2})\b/i)
+    if (!m) return null
+    const current = parseInt(m[1], 10)
+    const total = parseInt(m[2], 10)
+    if (total < 2 || current < 1 || current > total) return null
+    return { current, total }
 }
 
 function parseOfxDate(raw: string): string {
@@ -125,6 +140,7 @@ function mapOfxToTransactions(data: Record<string, unknown>): Transaction[] {
                 : trnType === "DEBIT" ? "expense"
                     : rawAmount >= 0 ? "income" : "expense"
 
+        const installment = detectInstallment(desc)
         return [{
             account_id: 0,
             date: parseOfxDate(rawDate),
@@ -134,6 +150,8 @@ function mapOfxToTransactions(data: Record<string, unknown>): Transaction[] {
             category: "",
             source: "ofx" as const,
             external_id: fitid || undefined,
+            installment_number: installment?.current ?? null,
+            // installment_group_id linked after import in installments page
         }]
     })
 }
