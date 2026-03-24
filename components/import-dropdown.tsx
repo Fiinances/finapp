@@ -40,6 +40,14 @@ function mapCsvToTransactions(rows: Record<string, unknown>[]): Transaction[] {
     const descCol = findCol(headers, "descri", "historico", "title", "lancamento", "lançamento", "memo", "payee", "name")
     const amountCol = findCol(headers, "valor", "amount", "value", "montante")
 
+    const missing: string[] = []
+    if (!dateCol) missing.push("data")
+    if (!descCol) missing.push("descrição")
+    if (!amountCol) missing.push("valor")
+    if (missing.length > 0) {
+        throw new Error(`Não foi possível identificar as colunas: ${missing.join(", ")}. Colunas encontradas: ${headers.join(", ")}`)
+    }
+
     return rows.flatMap(row => {
         const rawDate = dateCol ? String(row[dateCol] ?? "") : ""
         const rawDesc = descCol ? String(row[descCol] ?? "") : ""
@@ -91,10 +99,10 @@ function mapOfxToTransactions(data: Record<string, unknown>): Transaction[] {
         ((bankMsgs?.STMTTRNRS as Record<string, unknown>)?.STMTRS as Record<string, unknown>) ??
         ((ccMsgs?.CCSTMTTRNRS as Record<string, unknown>)?.CCSTMTRS as Record<string, unknown>)
 
-    if (!stmtrs) return []
+    if (!stmtrs) throw new Error("Formato OFX não reconhecido: não foi possível encontrar o extrato de conta bancária ou cartão de crédito no arquivo.")
 
     const txList = (stmtrs.BANKTRANLIST as Record<string, unknown>)?.STMTTRN
-    if (!txList) return []
+    if (!txList) throw new Error("Nenhuma transação encontrada no arquivo OFX. O extrato pode estar vazio.")
 
     const txArr: Record<string, unknown>[] = Array.isArray(txList) ? txList : [txList]
 

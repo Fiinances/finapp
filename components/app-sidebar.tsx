@@ -49,7 +49,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavPrincipal principals={data.principals} />
       </SidebarContent>
       <SidebarFooter>
-        <NavSettings />
+        {/* <NavSettings /> */}
         <div className="px-3 pb-1 group-data-[collapsible=icon]:hidden">
           <span className="text-xs text-muted-foreground/60 select-none">
             v{process.env.NEXT_PUBLIC_APP_VERSION}
