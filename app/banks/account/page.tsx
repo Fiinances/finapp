@@ -143,15 +143,23 @@ function TxRow({ draft, onChange, onDelete, deleting }: TxRowProps) {
             <td className={`${cellCls} text-center`}>
                 <button
                     type="button"
-                    onClick={() => onChange("type", draft.type === "income" ? "expense" : draft.type === "expense" ? "investment" : "income")}
+                    onClick={() => {
+                        const next: Record<string, Transaction["type"]> = { income: "expense", expense: "investment", investment: "transfer", transfer: "card_payment", card_payment: "income" }
+                        onChange("type", next[draft.type] ?? "income")
+                    }}
+                    title={draft.type === "transfer" ? "Transferências entre contas — não conta como despesa" : draft.type === "card_payment" ? "Pagamento de fatura do cartão — não conta como despesa" : undefined}
                     className={`rounded-full px-2 py-0.5 text-xs font-medium cursor-pointer whitespace-nowrap ${draft.type === "income"
                         ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
                         : draft.type === "investment"
                             ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
-                            : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                            : draft.type === "transfer"
+                                ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+                                : draft.type === "card_payment"
+                                    ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
+                                    : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
                         }`}
                 >
-                    {draft.type === "income" ? "Entrada" : draft.type === "investment" ? "Investimento" : "Saída"}
+                    {draft.type === "income" ? "Entrada" : draft.type === "investment" ? "Investimento" : draft.type === "transfer" ? "Transferência" : draft.type === "card_payment" ? "Pgto. Cartão" : "Saída"}
                 </button>
             </td>
             {/* Category */}

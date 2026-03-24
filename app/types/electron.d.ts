@@ -5,7 +5,7 @@ export interface Transaction {
   date: string
   description: string
   amount: number
-  type: 'income' | 'expense' | 'investment'
+  type: 'income' | 'expense' | 'investment' | 'transfer' | 'card_payment'
   category?: string
   source?: 'manual' | 'csv' | 'ofx'
   external_id?: string
@@ -63,7 +63,7 @@ export interface Subscription {
 }
 
 export interface TransactionFilters {
-  type?: 'income' | 'expense' | 'investment'
+  type?: 'income' | 'expense' | 'investment' | 'transfer' | 'card_payment'
   accountId?: number
   creditCardId?: number
   source?: 'manual' | 'csv' | 'ofx'

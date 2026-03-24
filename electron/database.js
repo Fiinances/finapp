@@ -63,13 +63,42 @@ async function migrate() {
             t.date('date').notNullable()
             t.string('description').notNullable()
             t.decimal('amount', 15, 2).notNullable()
-            t.enu('type', ['income', 'expense', 'investment']).notNullable()
+            t.enu('type', ['income', 'expense', 'investment', 'transfer', 'card_payment']).notNullable()
             t.string('category')
             t.enu('source', ['manual', 'csv', 'ofx']).defaultTo('manual')
             t.string('external_id') // OFX FITID — evita duplicatas
             t.string('billing_month').nullable() // MM/YYYY — mes de fatura do cartao
             t.timestamps(true, true)
         })
+    }
+
+    // Migrate existing transactions table to support 'transfer' and 'card_payment' types
+    if (hasTransactions) {
+        const [{ sql }] = await db.raw(
+            "SELECT sql FROM sqlite_master WHERE type='table' AND name='transactions'"
+        )
+        if (sql && !sql.includes('card_payment')) {
+            await db.raw(`
+                CREATE TABLE transactions_new (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    account_id INTEGER REFERENCES accounts(id) ON DELETE SET NULL,
+                    credit_card_id INTEGER REFERENCES credit_cards(id) ON DELETE SET NULL,
+                    date DATE NOT NULL,
+                    description VARCHAR(255) NOT NULL,
+                    amount DECIMAL(15,2) NOT NULL,
+                    type VARCHAR(255) CHECK(type IN ('income','expense','investment','transfer','card_payment')) NOT NULL,
+                    category VARCHAR(255),
+                    source VARCHAR(255) CHECK(source IN ('manual','csv','ofx')) DEFAULT 'manual',
+                    external_id VARCHAR(255),
+                    billing_month VARCHAR(255),
+                    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+                )
+            `)
+            await db.raw('INSERT INTO transactions_new SELECT * FROM transactions')
+            await db.raw('DROP TABLE transactions')
+            await db.raw('ALTER TABLE transactions_new RENAME TO transactions')
+        }
     }
 
     const hasSubscriptions = await db.schema.hasTable('subscriptions')

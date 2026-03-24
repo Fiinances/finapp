@@ -600,15 +600,23 @@ export default function ImportDropdown({ defaultAccountId, defaultCreditCardId, 
                                                 <td className="px-3 py-1.5 text-center">
                                                     <button
                                                         type="button"
-                                                        onClick={() => updateRow(i, "type", t.type === "income" ? "expense" : t.type === "expense" ? "investment" : "income")}
+                                                        onClick={() => {
+                                                            const next: Record<string, Transaction["type"]> = { income: "expense", expense: "investment", investment: "transfer", transfer: "card_payment", card_payment: "income" }
+                                                            updateRow(i, "type", next[t.type] ?? "income")
+                                                        }}
+                                                        title={t.type === "transfer" ? "Transferências entre contas — não conta como despesa" : t.type === "card_payment" ? "Pagamento de fatura do cartão — não conta como despesa" : undefined}
                                                         className={`rounded-full px-2 py-0.5 text-xs font-medium cursor-pointer ${t.type === "income"
                                                             ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
                                                             : t.type === "investment"
                                                                 ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
-                                                                : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                                                                : t.type === "transfer"
+                                                                    ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
+                                                                    : t.type === "card_payment"
+                                                                        ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
+                                                                        : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
                                                             }`}
                                                     >
-                                                        {t.type === "income" ? "Entrada" : t.type === "investment" ? "Investimento" : "Saída"}
+                                                        {t.type === "income" ? "Entrada" : t.type === "investment" ? "Investimento" : t.type === "transfer" ? "Transferência" : t.type === "card_payment" ? "Pgto. Cartão" : "Saída"}
                                                     </button>
                                                 </td>
                                                 <td className="px-3 py-1.5">

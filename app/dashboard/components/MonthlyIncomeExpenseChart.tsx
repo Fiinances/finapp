@@ -67,6 +67,7 @@ export function MonthlyIncomeExpenseChart({ accountId }: MonthlyIncomeExpenseCha
     for (const t of transactions) {
         const ym = parseYearMonth(t.date)
         if (!grouped[ym]) continue
+        if (t.type === "transfer" || t.type === "card_payment") continue
         if (t.type === "income") grouped[ym].income += t.amount
         else if (t.type === "investment") grouped[ym].investment += t.amount
         else grouped[ym].expense += t.amount
