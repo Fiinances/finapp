@@ -587,7 +587,14 @@ export default function ImportDropdown({ defaultAccountId, defaultCreditCardId, 
                                         {previewTransactions.map((t, i) => (
                                             <tr key={i} className="border-b last:border-0 hover:bg-muted/30">
                                                 <td className="px-3 py-1.5 text-xs text-muted-foreground whitespace-nowrap">{t.date}</td>
-                                                <td className="px-3 py-1.5 max-w-[200px] truncate text-xs" title={t.description}>{t.description}</td>
+                                                <td className="px-3 py-1.5">
+                                                    <input
+                                                        type="text"
+                                                        value={t.description}
+                                                        onChange={e => updateRow(i, "description", e.target.value)}
+                                                        className="h-7 w-full min-w-[160px] rounded border border-input bg-transparent px-2 text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+                                                    />
+                                                </td>
                                                 <td className="px-3 py-1.5">
                                                     <input
                                                         type="text"
