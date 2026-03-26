@@ -18,6 +18,7 @@ import {
     SheetClose,
 } from "@/components/ui/sheet"
 import { Input } from "@/components/ui/input"
+import MonthPicker from "@/components/month-picker"
 import { InfoIcon, Trash2Icon, Wand, LoaderCircle } from "lucide-react"
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert"
 import Papa from "papaparse"
@@ -182,23 +183,7 @@ function formatAmount(value: number): string {
 
 // ── Month Picker ──────────────────────────────────────────────────────────────
 
-function MonthPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-    return (
-        <input
-            type="text"
-            inputMode="numeric"
-            placeholder="MM/AAAA"
-            value={value}
-            maxLength={7}
-            onChange={(e) => {
-                let v = e.target.value.replace(/[^\d/]/g, "")
-                if (v.length === 2 && !v.includes("/")) v += "/"
-                onChange(v)
-            }}
-            className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-        />
-    )
-}
+
 
 // ── Billing month inference ───────────────────────────────────────────────────
 
@@ -448,7 +433,7 @@ export default function ImportDropdown({ defaultAccountId, defaultCreditCardId, 
         <>
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                    <Button variant="secondary">Importar</Button>
+                    <Button variant="secondary" className="cursor-pointer">Importar</Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
                     <DropdownMenuItem onSelect={() => openFor("ofx")}>Importar OFX</DropdownMenuItem>

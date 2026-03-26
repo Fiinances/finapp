@@ -4,9 +4,11 @@ import React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
+import MonthPicker from "@/components/month-picker"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ArrowLeftIcon, ChevronDownIcon, ChevronRightIcon, CreditCardIcon, SaveIcon, Trash2Icon, Wand, LoaderCircle } from "lucide-react"
 import ImportDropdown from "@/components/import-dropdown"
+import { AddTransactionSheet } from "../components/add-transaction-sheet"
 import type { Account, CreditCard, Transaction } from "@/app/types/electron"
 import { Suspense } from "react"
 import { EditCreditCardSheet } from "../components/edit-credit-card-sheet"
@@ -180,17 +182,9 @@ function TxRow({ draft, onChange, onDelete, deleting }: TxRowProps) {
                 </datalist>
             </td>
             <td className={cellCls}>
-                <input
-                    type="text"
-                    inputMode="numeric"
+                <MonthPicker
                     value={draft.billing_month ?? ""}
-                    placeholder="MM/AAAA"
-                    maxLength={7}
-                    onChange={(e) => {
-                        let v = e.target.value.replace(/[^\d/]/g, "")
-                        if (v.length === 2 && !v.includes("/")) v += "/"
-                        onChange("billing_month", v || null)
-                    }}
+                    onChange={(v) => onChange("billing_month", v || null)}
                     className={`${inputCls} w-[90px]`}
                 />
             </td>
@@ -314,6 +308,7 @@ function CardDetailPage() {
     const [deletingMonth, setDeletingMonth] = React.useState<string | null>(null)
     const [autoCategorizing, setAutoCategorizing] = React.useState<string | null>(null)
     const [editOpen, setEditOpen] = React.useState(false)
+    const [addOpen, setAddOpen] = React.useState(false)
 
     function handleDraftChange<K extends keyof Transaction>(id: number, field: K, value: Transaction[K]) {
         setDrafts(prev => ({ ...prev, [id]: { ...prev[id], [field]: value } }))
@@ -425,10 +420,12 @@ function CardDetailPage() {
                                 </p>
                             )}
                         </div>
-                        <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
-                            Editar
-                        </Button>
-                        <ImportDropdown defaultCreditCardId={card.id} onSuccess={load} />
+                        <div className="flex items-center gap-2">
+                            <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
+                                Editar
+                            </Button>
+                            <ImportDropdown defaultCreditCardId={card.id} onSuccess={load} />
+                        </div>
                     </div>
                 )}
             </div>
@@ -436,6 +433,7 @@ function CardDetailPage() {
             {/* Card info */}
             {!loading && card && (
                 <Card>
+                    <AddTransactionSheet open={addOpen} onOpenChange={setAddOpen} onSuccess={load} creditCardId={card?.id ?? null} />
                     <CardContent className="pt-4">
                         <div className="grid gap-4 sm:grid-cols-3">
                             <div>
@@ -494,8 +492,15 @@ function CardDetailPage() {
             {/* Tree table */}
             <Card>
                 <CardHeader>
-                    <CardTitle>Faturas</CardTitle>
-                    <CardDescription>Clique em uma fatura para expandir e editar as transações.</CardDescription>
+                    <div className="flex items-start justify-between w-full">
+                        <div>
+                            <CardTitle>Faturas</CardTitle>
+                            <CardDescription>Clique em uma fatura para expandir e editar as transações.</CardDescription>
+                        </div>
+                        <div className="flex items-center">
+                            <Button size="sm" className="cursor-pointer" variant="secondary" onClick={() => setAddOpen(true)}>Adicionar</Button>
+                        </div>
+                    </div>
                 </CardHeader>
                 <CardContent>
                     {loading ? (

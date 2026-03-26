@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ArrowLeftIcon, ChevronDownIcon, ChevronRightIcon, SaveIcon, Trash2Icon, CreditCardIcon, Wand, LoaderCircle } from "lucide-react"
 import ImportDropdown from "@/components/import-dropdown"
+import { AddTransactionSheet } from "../components/add-transaction-sheet"
 import { MonthlyIncomeExpenseChart } from "@/app/dashboard/components/MonthlyIncomeExpenseChart"
 import { CategoryExpenseChart } from "@/app/dashboard/components/CategoryExpenseChart"
 import { CreditCardFaturaChart } from "@/app/dashboard/components/CreditCardFaturaChart"
@@ -293,6 +294,7 @@ function AccountDetailPage() {
     const [autoCategorizing, setAutoCategorizing] = React.useState<string | null>(null)
     const [linkedCards, setLinkedCards] = React.useState<CreditCard[]>([])
     const [cardSpend, setCardSpend] = React.useState<Record<number, number>>({})
+    const [addOpen, setAddOpen] = React.useState(false)
 
     function handleDraftChange<K extends keyof Transaction>(id: number, field: K, value: Transaction[K]) {
         setDrafts(prev => ({ ...prev, [id]: { ...prev[id], [field]: value } }))
@@ -408,7 +410,7 @@ function AccountDetailPage() {
         <div className="flex flex-col gap-4">
             {/* Header */}
             <div className="flex items-center gap-3">
-                <Button variant="secondary" size="icon" onClick={() => router.back()}>
+                <Button variant="secondary" className="cursor-pointer" size="icon" onClick={() => router.back()}>
                     <ArrowLeftIcon className="size-4" />
                 </Button>
                 {account && (
@@ -418,7 +420,9 @@ function AccountDetailPage() {
                             <h1 className="text-lg font-semibold leading-none">{account.name}</h1>
                             {account.bank && <p className="text-sm text-muted-foreground">{account.bank}</p>}
                         </div>
-                        <ImportDropdown defaultAccountId={account.id} onSuccess={load} />
+                        <div className="flex items-center gap-2">
+                            <ImportDropdown defaultAccountId={account.id} onSuccess={load} />
+                        </div>
                     </div>
                 )}
             </div>
@@ -532,8 +536,15 @@ function AccountDetailPage() {
             {/* Tree table */}
             <Card>
                 <CardHeader>
-                    <CardTitle>Transações por mês</CardTitle>
-                    <CardDescription>Clique em um mês para expandir e editar as transações.</CardDescription>
+                    <div className="flex items-start justify-between w-full">
+                        <div>
+                            <CardTitle>Transações por mês</CardTitle>
+                            <CardDescription>Clique em um mês para expandir e editar as transações.</CardDescription>
+                        </div>
+                        <div className="flex items-center">
+                            <Button size="sm" className="cursor-pointer" variant="secondary" onClick={() => setAddOpen(true)}>Adicionar</Button>
+                        </div>
+                    </div>
                 </CardHeader>
                 <CardContent>
                     {loading ? (
@@ -657,6 +668,7 @@ function AccountDetailPage() {
                     )}
                 </CardContent>
             </Card>
+            <AddTransactionSheet open={addOpen} onOpenChange={setAddOpen} onSuccess={load} accountId={account?.id ?? null} />
         </div>
     )
 }

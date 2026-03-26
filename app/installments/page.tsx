@@ -29,6 +29,7 @@ import type { InstallmentGroup, CreditCard } from "@/app/types/electron"
 import { DetectInstallmentsSheet } from "./components/detect-installments-sheet"
 
 import { formatBRL, addMonths, lastBillingMonth } from "@/lib/utils"
+import MonthPicker from "@/components/month-picker"
 
 function lastBillingMonthGroup(group: InstallmentGroup): string {
     return lastBillingMonth(group.first_billing_month, group.installments)
@@ -337,15 +338,9 @@ export default function InstallmentsPage() {
                         <div className="grid grid-cols-2 gap-3">
                             <div className="flex flex-col gap-1.5">
                                 <Label>1ª parcela (MM/AAAA)</Label>
-                                <Input
-                                    placeholder="01/2026"
-                                    maxLength={7}
+                                <MonthPicker
                                     value={form.first_billing_month}
-                                    onChange={e => {
-                                        let v = e.target.value.replace(/[^\d/]/g, "")
-                                        if (v.length === 2 && !v.includes("/")) v += "/"
-                                        setForm(f => ({ ...f, first_billing_month: v }))
-                                    }}
+                                    onChange={(v) => setForm(f => ({ ...f, first_billing_month: v }))}
                                 />
                             </div>
                             <div className="flex flex-col gap-1.5">

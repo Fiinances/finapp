@@ -13,6 +13,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
+import { formatCurrency } from "@/lib/utils"
 import type { Subscription, Account, CreditCard } from "@/app/types/electron"
 
 const PRESET_COLORS = [
@@ -56,10 +57,7 @@ export function SubscriptionSheet({ open, onOpenChange, onSuccess, subscription 
         return { account_id: null, credit_card_id: null }
     }
 
-    function formatCurrency(digits: string): string {
-        const num = parseInt(digits || "0", 10)
-        return (num / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 2 })
-    }
+
 
     function handleAmountInput(e: React.ChangeEvent<HTMLInputElement>) {
         setAmountDigits(e.target.value.replace(/\D/g, ""))

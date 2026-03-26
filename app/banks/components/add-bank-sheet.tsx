@@ -14,6 +14,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
+import { formatCurrency } from "@/lib/utils"
 
 interface AddBankSheetProps {
     open: boolean
@@ -28,14 +29,7 @@ export function AddBankSheet({ open, onOpenChange, onSuccess }: AddBankSheetProp
     const [color, setColor] = React.useState("#6366f1")
     const [loading, setLoading] = React.useState(false)
 
-    function formatCurrency(digits: string): string {
-        const num = parseInt(digits || "0", 10)
-        return (num / 100).toLocaleString("pt-BR", {
-            style: "currency",
-            currency: "BRL",
-            minimumFractionDigits: 2,
-        })
-    }
+
 
     function handleOpenChange(value: boolean) {
         if (!value) {

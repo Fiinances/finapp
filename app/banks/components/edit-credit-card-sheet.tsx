@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import type { Account, CreditCard } from "@/app/types/electron"
+import { formatCurrency } from "@/lib/utils"
 
 interface EditCreditCardSheetProps {
     card: CreditCard | null
@@ -52,14 +53,7 @@ export function EditCreditCardSheet({ card, open, onOpenChange, onSuccess }: Edi
         }
     }, [open])
 
-    function formatCurrency(digits: string): string {
-        const num = parseInt(digits || "0", 10)
-        return (num / 100).toLocaleString("pt-BR", {
-            style: "currency",
-            currency: "BRL",
-            minimumFractionDigits: 2,
-        })
-    }
+
 
     async function onSubmit(e: React.FormEvent) {
         e.preventDefault()
