@@ -62,6 +62,7 @@ jobs:
           generate_release_notes: false
           draft: false
           make_latest: true
+          allowUpdates: true
         env:
           GITHUB_TOKEN: ${{ secrets.RELEASE_PAT }}
 
