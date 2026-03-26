@@ -71,5 +71,6 @@ jobs:
           make_latest: true
           allowUpdates: true
         env:
+          GH_TOKEN: ${{ secrets.RELEASE_PAT }}
           GITHUB_TOKEN: ${{ secrets.RELEASE_PAT }}
 
