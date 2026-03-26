@@ -5,6 +5,10 @@ on:
     tags:
       - 'v*.*.*'
   workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to release (e.g. v1.2.3)'
+        required: false
 
 # Permissions only for the private source repo (read is enough here)
 permissions:
@@ -56,8 +60,8 @@ jobs:
       - name: Finalize GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_name }}
-          name: Finapp ${{ github.ref_name }}
+          tag_name: ${{ github.event.inputs.tag && github.event.inputs.tag != '' && github.event.inputs.tag || github.ref_name }}
+          name: Finapp ${{ github.event.inputs.tag && github.event.inputs.tag != '' && github.event.inputs.tag || github.ref_name }}
           repository: Fiinances/finapp_releases
           generate_release_notes: false
           draft: false
