@@ -36,5 +36,11 @@ jobs:
 
       - name: Bump version and push tag
         run: |
-          npm version ${{ inputs.bump }} -m "chore: release %s"
+          NEW_TAG=$(npm version ${{ inputs.bump }} -m "chore: release %s")
+          
+          # Push para o repositório PRIVADO (onde a action roda)
           git push origin HEAD:main --follow-tags
+          
+          # Configura e envia para o repositório PÚBLICO
+          git remote add public https://x-access-token:${{ secrets.RELEASE_TOKEN }}@github.com/Fiinances/finapp_releases.git
+          git push public $NEW_TAG

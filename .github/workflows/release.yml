@@ -31,7 +31,19 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          token: ${{ secrets.RELEASE_PAT }} # Use o PAT para ter permissão de push
           ref: ${{ github.event.inputs.tag && github.event.inputs.tag != '' && github.event.inputs.tag || github.ref_name }}
+      
+      - name: Sync Tag to Public Repo
+        run: |
+          # Define qual tag estamos usando
+          CURRENT_TAG=${{ github.event.inputs.tag && github.event.inputs.tag != '' && github.event.inputs.tag || github.ref_name }}
+          
+          # Adiciona o remoto público e força o envio da tag
+          git remote add public https://x-access-token:${{ secrets.RELEASE_PAT }}@github.com/Fiinances/finapp_releases.git
+          
+          # Tenta dar push na tag. Se já existir, ele apenas ignora
+          git push public $CURRENT_TAG || echo "Tag already exists on public repo"
 
       - uses: actions/setup-node@v4
         with:
