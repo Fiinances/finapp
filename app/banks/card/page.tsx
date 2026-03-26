@@ -210,7 +210,9 @@ interface MonthRowsProps {
     transactions: Transaction[]
     drafts: Record<number, Transaction>
     onDraftChange: <K extends keyof Transaction>(id: number, field: K, value: Transaction[K]) => void
-    onSaved: () => void
+    // updatedIds: array of transaction ids that were successfully updated
+    // deletedId: id of a transaction that was deleted
+    onSaved: (updatedIds?: number[], deletedId?: number) => void
 }
 
 function MonthRows({ transactions, drafts, onDraftChange, onSaved }: MonthRowsProps) {
@@ -246,7 +248,7 @@ function MonthRows({ transactions, drafts, onDraftChange, onSaved }: MonthRowsPr
                 })
             ))
             toast.success(`${dirtyEntries.length} transação(ões) salva(s)`, { position: "top-center" })
-            onSaved()
+            onSaved(dirtyEntries.map(t => t.id!).filter(Boolean))
         } catch (err) {
             toast.error(err instanceof Error ? err.message : "Erro ao salvar")
         } finally {
@@ -258,7 +260,7 @@ function MonthRows({ transactions, drafts, onDraftChange, onSaved }: MonthRowsPr
         setDeletingId(id)
         try {
             await window.electronAPI?.db.transactions.delete(id)
-            onSaved()
+            onSaved(undefined, id)
         } catch (err) {
             toast.error(err instanceof Error ? err.message : "Erro ao excluir")
             setDeletingId(null)
@@ -350,6 +352,49 @@ function CardDetailPage() {
     }
 
     React.useEffect(() => { load() }, [cardId])
+
+    async function handleMonthRowsSaved(updatedIds?: number[], deletedId?: number) {
+        if (!cardId) return
+        try {
+            // Rebuild current transactions from local summaries, apply local drafts for updated ids
+            const currentTxns: Transaction[] = summaries.flatMap(s => s.transactions).map(t => ({ ...t }))
+
+            let nextTxns = currentTxns
+
+            if (updatedIds && updatedIds.length > 0) {
+                nextTxns = nextTxns.map(t => {
+                    if (t.id != null && updatedIds.includes(t.id)) {
+                        const d = drafts[t.id]
+                        return d ? { ...d } : t
+                    }
+                    return t
+                })
+
+                setDrafts(prev => {
+                    const next = { ...prev }
+                    updatedIds.forEach(id => {
+                        const d = drafts[id]
+                        if (d) next[id] = { ...d }
+                        else delete next[id]
+                    })
+                    return next
+                })
+            }
+
+            if (deletedId != null) {
+                nextTxns = nextTxns.filter(t => t.id !== deletedId)
+                setDrafts(prev => {
+                    const next = { ...prev }
+                    delete next[deletedId]
+                    return next
+                })
+            }
+
+            setSummaries(buildSummaries(nextTxns))
+        } catch (err) {
+            toast.error(err instanceof Error ? err.message : "Erro ao atualizar localmente")
+        }
+    }
 
     function toggleExpand(monthYear: string) {
         setExpanded((prev) => {
@@ -594,7 +639,7 @@ function CardDetailPage() {
                                                                         transactions={s.transactions}
                                                                         drafts={drafts}
                                                                         onDraftChange={handleDraftChange}
-                                                                        onSaved={load}
+                                                                        onSaved={handleMonthRowsSaved}
                                                                     />
                                                                 </tbody>
                                                             </table>
