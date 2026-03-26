@@ -35,6 +35,7 @@ jobs:
           ref: ${{ github.event.inputs.tag && github.event.inputs.tag != '' && github.event.inputs.tag || github.ref_name }}
       
       - name: Sync Tag to Public Repo
+        shell: bash
         run: |
           # Define qual tag estamos usando
           CURRENT_TAG=${{ github.event.inputs.tag && github.event.inputs.tag != '' && github.event.inputs.tag || github.ref_name }}
