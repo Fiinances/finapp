@@ -49,16 +49,6 @@ jobs:
           GH_TOKEN: ${{ secrets.RELEASE_PAT }}
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
 
-      - uses: actions/upload-artifact@v4
-        with:
-          name: release-${{ matrix.os }}
-          path: |
-            ${{ matrix.artifact_pattern }}
-            release/**/*.blockmap
-            release/**/latest*.yml
-          retention-days: 1
-          if-no-files-found: warn
-
   release:
     needs: build
     runs-on: ubuntu-latest
