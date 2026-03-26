@@ -74,20 +74,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Debug Token Permission
-          shell: bash
-          run: |
-            curl -H "Authorization: token ${{ secrets.RELEASE_PAT }}" \
-                https://api.github.com/repos/Fiinances/finapp_releases/releases
+        shell: bash
+        run: |
+          curl -H "Authorization: token ${{ secrets.RELEASE_PAT }}" \
+              https://api.github.com/repos/Fiinances/finapp_releases/releases
       - name: Finalize GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.event.inputs.tag && github.event.inputs.tag != '' && github.event.inputs.tag || github.ref_name }}
           name: Finapp ${{ github.event.inputs.tag && github.event.inputs.tag != '' && github.event.inputs.tag || github.ref_name }}
           repository: Fiinances/finapp_releases
-          generate_release_notes: false
+          generate_release_notes: true
           draft: false
           make_latest: true
           allowUpdates: true
+          token: ${{ secrets.RELEASE_PAT }}
         env:
           GH_TOKEN: ${{ secrets.RELEASE_PAT }}
 
