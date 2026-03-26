@@ -28,18 +28,10 @@ import { Label } from "@/components/ui/label"
 import type { InstallmentGroup, CreditCard } from "@/app/types/electron"
 import { DetectInstallmentsSheet } from "./components/detect-installments-sheet"
 
-function formatBRL(v: number) {
-    return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
-}
+import { formatBRL, addMonths, lastBillingMonth } from "@/lib/utils"
 
-function addMonths(mmyyyy: string, n: number): string {
-    const [mm, yyyy] = mmyyyy.split("/").map(Number)
-    const d = new Date(yyyy, mm - 1 + n, 1)
-    return `${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`
-}
-
-function lastBillingMonth(group: InstallmentGroup): string {
-    return addMonths(group.first_billing_month, group.installments - 1)
+function lastBillingMonthGroup(group: InstallmentGroup): string {
+    return lastBillingMonth(group.first_billing_month, group.installments)
 }
 
 const EMPTY: Omit<InstallmentGroup, "id" | "paid_installments" | "remaining_installments" | "created_at" | "updated_at"> = {
@@ -254,7 +246,7 @@ export default function InstallmentsPage() {
                                                 </div>
                                             </TableCell>
                                             <TableCell className="text-sm">{g.first_billing_month}</TableCell>
-                                            <TableCell className="text-sm">{lastBillingMonth(g)}</TableCell>
+                                            <TableCell className="text-sm">{lastBillingMonthGroup(g)}</TableCell>
                                             <TableCell className="text-right font-medium text-amber-600 dark:text-amber-400">
                                                 {isDone ? <span className="text-green-600 dark:text-green-400 text-xs">Quitado</span> : formatBRL(valorRestante)}
                                             </TableCell>

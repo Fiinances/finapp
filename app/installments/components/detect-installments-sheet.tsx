@@ -14,9 +14,7 @@ import {
 import { toast } from "sonner"
 import type { DetectedInstallment, CreditCard } from "@/app/types/electron"
 
-function formatBRL(v: number) {
-    return v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
-}
+import { formatBRL } from "@/lib/utils"
 
 interface Props {
     open: boolean
