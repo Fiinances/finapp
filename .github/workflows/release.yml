@@ -52,8 +52,9 @@ jobs:
         with:
           fetch-depth: 0
           ref: ${{ github.event.inputs.tag && github.event.inputs.tag != '' && github.event.inputs.tag || github.ref_name }}
-        run: |
-          npm run dist:production
+        
+        run: npm run dist:production
+        
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: false
           # GH_TOKEN here authorizes electron-builder to publish to finapp_releases
