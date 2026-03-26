@@ -6,18 +6,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import type { ChartConfig } from "@/components/ui/chart"
 import type { CreditCard, Transaction } from "@/app/types/electron"
+import { txBillingMonth } from "@/lib/transactions"
 
 const FALLBACK_COLORS = [
     "#6366f1", "#f59e0b", "#ec4899", "#14b8a6", "#f97316", "#8b5cf6", "#3b82f6", "#84cc16",
 ]
-
-function txBillingMonth(t: Transaction): string {
-    if (t.billing_month) return t.billing_month
-    if (/^\d{4}-\d{2}-\d{2}/.test(t.date)) return `${t.date.slice(5, 7)}/${t.date.slice(0, 4)}`
-    const br = t.date.match(/^(\d{2})\/(\d{2})\/(\d{4})$/)
-    if (br) return `${br[2]}/${br[3]}`
-    return ""
-}
 
 function fmtK(v: number): string {
     if (Math.abs(v) >= 1000) return `${(v / 1000).toFixed(0)}k`

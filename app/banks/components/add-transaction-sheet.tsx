@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import type { Transaction } from "@/app/types/electron"
 import { formatCurrency } from "@/lib/utils"
+import { parseMaskedAmount } from "@/lib/transactions"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 import { format } from "date-fns"
@@ -29,22 +30,6 @@ interface Props {
     creditCardId?: number | null
 }
 
-function parseMaskedAmount(input: string): number {
-    const digits = input.replace(/\D/g, "")
-    return digits ? parseInt(digits, 10) / 100 : 0
-}
-
-
-
-function parseDateToISO(date: string): string {
-    const iso = date.match(/^(\d{4})-(\d{2})-(\d{2})$/)
-    if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`
-
-    const m = date.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
-    if (m) return `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`
-
-    return date
-}
 
 
 export function AddTransactionSheet({ open, onOpenChange, onSuccess, accountId, creditCardId }: Props) {

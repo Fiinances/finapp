@@ -4,6 +4,7 @@ import React from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
+import MonthRows from "@/components/transaction-table"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ArrowLeftIcon, ChevronDownIcon, ChevronRightIcon, SaveIcon, Trash2Icon, CreditCardIcon, Wand, LoaderCircle } from "lucide-react"
 import ImportDropdown from "@/components/import-dropdown"
@@ -20,265 +21,13 @@ const CATEGORIES = [
     "Lazer", "Vestuário", "Salário", "Investimento", "Transferência", "Boleto", "Outros",
 ]
 
-function parseMaskedAmount(input: string): number {
-    const digits = input.replace(/\D/g, "")
-    return digits ? parseInt(digits, 10) / 100 : 0
-}
+import { buildSummaries, txBillingMonth, MonthSummary } from "@/lib/transactions"
 
-function formatAmount(value: number): string {
-    return "R$ " + value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-}
-
-function formatDate(date: string): string {
-    // YYYY-MM-DD → DD/MM/YYYY
-    const iso = date.match(/^(\d{4})-(\d{2})-(\d{2})/)
-    if (iso) return `${iso[3]}/${iso[2]}/${iso[1]}`
-    // DD-MM-YYYY → DD/MM/YYYY
-    const dmy = date.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/)
-    if (dmy) return `${dmy[1].padStart(2, "0")}/${dmy[2].padStart(2, "0")}/${dmy[3]}`
-    return date
-}
-
-function parseDateToISO(date: string): string {
-    // DD/MM/YYYY → YYYY-MM-DD
-    const m = date.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
-    if (m) return `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`
-    return date
-}
-
-interface MonthSummary {
-    monthYear: string   // 'MM/YYYY'
-    label: string
-    count: number
-    income: number
-    expense: number
-    investment: number
-    total: number
-    transactions: Transaction[]
-}
-
-const MONTH_NAMES = [
-    "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
-]
-
-function parseYearMonth(date: string): string {
-    if (/^\d{4}-\d{2}/.test(date)) return date.slice(0, 7)
-    const br = date.match(/^(\d{2})\/(\d{2})\/(\d{4})$/)
-    if (br) return `${br[3]}-${br[2]}`
-    return date.slice(0, 7)
-}
-
-function buildSummaries(transactions: Transaction[]): MonthSummary[] {
-    const map = new Map<string, MonthSummary>()
-    for (const t of transactions) {
-        const ym = parseYearMonth(t.date)
-        if (!map.has(ym)) {
-            const [year, month] = ym.split("-")
-            map.set(ym, {
-                monthYear: `${month}/${year}`,
-                label: `${MONTH_NAMES[parseInt(month) - 1]} ${year}`,
-                count: 0, income: 0, expense: 0, investment: 0, total: 0, transactions: [],
-            })
-        }
-        const entry = map.get(ym)!
-        entry.count++
-        entry.transactions.push(t)
-        if (t.type === "income") entry.income += t.amount
-        else if (t.type === "investment") entry.investment += t.amount
-        else entry.expense += t.amount
-        entry.total = entry.income - entry.expense - entry.investment
-    }
-    return Array.from(map.values()).sort((a, b) => b.monthYear.localeCompare(a.monthYear))
-}
 
 function fmt(value: number) {
     return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
 }
 
-// ── Inline-editable transaction row (controlled) ────────────────
-
-interface TxRowProps {
-    draft: Transaction
-    onChange: <K extends keyof Transaction>(field: K, value: Transaction[K]) => void
-    onDelete: () => void
-    deleting: boolean
-}
-
-function TxRow({ draft, onChange, onDelete, deleting }: TxRowProps) {
-    const cellCls = "px-2 py-1.5"
-    const inputCls = "h-7 w-full rounded border border-transparent bg-transparent px-1.5 text-xs focus:border-input focus:outline-none focus:ring-1 focus:ring-ring hover:border-input/50 transition-colors"
-
-    return (
-        <tr className="border-b last:border-0 hover:bg-muted/20 group">
-            {/* Date */}
-            <td className={cellCls}>
-                <input
-                    type="text"
-                    value={formatDate(draft.date)}
-                    onChange={(e) => onChange("date", e.target.value)}
-                    className={`${inputCls} w-[100px]`}
-                    placeholder="DD/MM/AAAA"
-                />
-            </td>
-            {/* Description */}
-            <td className={cellCls}>
-                <input
-                    type="text"
-                    value={draft.description}
-                    onChange={(e) => onChange("description", e.target.value)}
-                    className={`${inputCls} min-w-[160px]`}
-                />
-            </td>
-            {/* Amount */}
-            <td className={cellCls}>
-                <input
-                    type="text"
-                    inputMode="decimal"
-                    value={formatAmount(draft.amount)}
-                    onChange={(e) => onChange("amount", parseMaskedAmount(e.target.value))}
-                    className={`${inputCls} w-[96px] text-right`}
-                />
-            </td>
-            {/* Type */}
-            <td className={`${cellCls} text-center`}>
-                <button
-                    type="button"
-                    onClick={() => {
-                        const next: Record<string, Transaction["type"]> = { income: "expense", expense: "investment", investment: "transfer", transfer: "card_payment", card_payment: "income" }
-                        onChange("type", next[draft.type] ?? "income")
-                    }}
-                    title={draft.type === "transfer" ? "Transferências entre contas — não conta como despesa" : draft.type === "card_payment" ? "Pagamento de fatura do cartão — não conta como despesa" : undefined}
-                    className={`rounded-full px-2 py-0.5 text-xs font-medium cursor-pointer whitespace-nowrap ${draft.type === "income"
-                        ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
-                        : draft.type === "investment"
-                            ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
-                            : draft.type === "transfer"
-                                ? "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
-                                : draft.type === "card_payment"
-                                    ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
-                                    : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
-                        }`}
-                >
-                    {draft.type === "income" ? "Entrada" : draft.type === "investment" ? "Investimento" : draft.type === "transfer" ? "Transferência" : draft.type === "card_payment" ? "Pgto. Cartão" : "Saída"}
-                </button>
-            </td>
-            {/* Category */}
-            <td className={cellCls}>
-                <input
-                    list="account-category-options"
-                    type="text"
-                    value={draft.category ?? ""}
-                    onChange={(e) => onChange("category", e.target.value)}
-                    placeholder="Categoria…"
-                    className={`${inputCls} w-[120px]`}
-                />
-                <datalist id="account-category-options">
-                    {CATEGORIES.map((c) => <option key={c} value={c} />)}
-                </datalist>
-            </td>
-            {/* Actions */}
-            <td className={`${cellCls} text-right`}>
-                <Button
-                    size="icon"
-                    variant="ghost"
-                    className="size-7 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-                    disabled={deleting}
-                    onClick={onDelete}
-                    title="Excluir"
-                >
-                    <Trash2Icon className="size-3.5" />
-                </Button>
-            </td>
-        </tr>
-    )
-}
-
-// ── Month rows with batch save ────────────────────────────────────
-
-interface MonthRowsProps {
-    transactions: Transaction[]
-    drafts: Record<number, Transaction>
-    onDraftChange: <K extends keyof Transaction>(id: number, field: K, value: Transaction[K]) => void
-    // updatedIds: array of transaction ids that were successfully updated
-    // deletedId: id of a transaction that was deleted
-    onSaved: (updatedIds?: number[], deletedId?: number) => void
-}
-
-function MonthRows({ transactions, drafts, onDraftChange, onSaved }: MonthRowsProps) {
-    const [saving, setSaving] = React.useState(false)
-    const [deletingId, setDeletingId] = React.useState<number | null>(null)
-
-    const dirtyEntries = transactions.filter(
-        t => t.id != null && JSON.stringify(drafts[t.id]) !== JSON.stringify(t)
-    )
-
-    async function saveAll() {
-        setSaving(true)
-        try {
-            await Promise.all(dirtyEntries.map(t =>
-                window.electronAPI?.db.transactions.update(t.id!, {
-                    date: parseDateToISO(drafts[t.id!].date),
-                    description: drafts[t.id!].description,
-                    amount: drafts[t.id!].amount,
-                    type: drafts[t.id!].type,
-                    category: drafts[t.id!].category,
-                })
-            ))
-            toast.success(`${dirtyEntries.length} transação(ões) salva(s)`, { position: "top-center" })
-            onSaved(dirtyEntries.map(t => t.id!).filter(Boolean))
-        } catch (err) {
-            toast.error(err instanceof Error ? err.message : "Erro ao salvar")
-        } finally {
-            setSaving(false)
-        }
-    }
-
-    async function handleDelete(id: number) {
-        setDeletingId(id)
-        try {
-            await window.electronAPI?.db.transactions.delete(id)
-            onSaved(undefined, id)
-        } catch (err) {
-            toast.error(err instanceof Error ? err.message : "Erro ao excluir")
-            setDeletingId(null)
-        }
-    }
-
-    const sorted = [...transactions].sort((a, b) => a.date.localeCompare(b.date))
-
-    return (
-        <>
-            {sorted.map(tx => (
-                <TxRow
-                    key={tx.id}
-                    draft={drafts[tx.id!] ?? tx}
-                    onChange={(field, value) => onDraftChange(tx.id!, field, value)}
-                    onDelete={() => handleDelete(tx.id!)}
-                    deleting={deletingId === tx.id}
-                />
-            ))}
-            {dirtyEntries.length > 0 && (
-                <tr className="bg-primary/5 border-t">
-                    <td colSpan={6} className="px-3 py-2 text-right">
-                        <Button size="sm" disabled={saving} onClick={saveAll}>
-                            <SaveIcon className="size-3.5 mr-1.5" />
-                            {saving ? "Salvando…" : `Salvar ${dirtyEntries.length} alteração(ões)`}
-                        </Button>
-                    </td>
-                </tr>
-            )}
-        </>
-    )
-}
-
-function txBillingMonth(t: Transaction): string {
-    if (t.billing_month) return t.billing_month
-    if (/^\d{4}-\d{2}-\d{2}/.test(t.date)) return `${t.date.slice(5, 7)}/${t.date.slice(0, 4)}`
-    const br = t.date.match(/^(\d{2})\/(\d{2})\/(\d{4})$/)
-    if (br) return `${br[2]}/${br[3]}`
-    return ""
-}
 
 // ── Page ─────────────────────────────────────────────────────────
 
@@ -684,6 +433,7 @@ function AccountDetailPage() {
                                                                         drafts={drafts}
                                                                         onDraftChange={handleDraftChange}
                                                                         onSaved={handleMonthRowsSaved}
+                                                                        categories={CATEGORIES}
                                                                     />
                                                                 </tbody>
                                                             </table>

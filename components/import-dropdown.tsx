@@ -25,6 +25,7 @@ import Papa from "papaparse"
 import { parse as parseOfx } from "ofx-js"
 import { toast } from "sonner"
 import type { Account, CreditCard, Transaction } from "@/app/types/electron"
+import { parseMaskedAmount } from "@/lib/transactions"
 
 type ImportKind = "ofx" | "csv" | null
 type ImportStep = "upload" | "preview"
@@ -171,11 +172,6 @@ const CATEGORIES = [
     "Boleto",
     "Outros",
 ]
-
-function parseMaskedAmount(input: string): number {
-    const digits = input.replace(/\D/g, "")
-    return digits ? parseInt(digits, 10) / 100 : 0
-}
 
 function formatAmount(value: number): string {
     return value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
