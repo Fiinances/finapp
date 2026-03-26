@@ -48,6 +48,10 @@ jobs:
         run: npm ci
 
       - name: Build and package
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.inputs.tag && github.event.inputs.tag != '' && github.event.inputs.tag || github.ref_name }}
         run: |
           npm run dist:production
         env:
