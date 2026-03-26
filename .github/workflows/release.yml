@@ -73,6 +73,11 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
+      - name: Debug Token Permission
+          shell: bash
+          run: |
+            curl -H "Authorization: token ${{ secrets.RELEASE_PAT }}" \
+                https://api.github.com/repos/Fiinances/finapp_releases/releases
       - name: Finalize GitHub Release
         uses: softprops/action-gh-release@v2
         with:
