@@ -34,7 +34,8 @@
     "**/*.tsx",
     "**/*.litertlm",
     ".next/types/**/*.ts",
-    "out/types/**/*.ts"
+    "out/types/**/*.ts",
+    "electron/database.js"
   ],
   "exclude": [
     "node_modules",
