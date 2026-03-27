@@ -94,6 +94,7 @@ async function migrate() {
             "SELECT sql FROM sqlite_master WHERE type='table' AND name='transactions'"
         )
         if (sql && !sql.includes('card_payment')) {
+            await db.raw('DROP TABLE IF EXISTS transactions_new')
             await db.raw(`
                 CREATE TABLE transactions_new (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -113,9 +114,26 @@ async function migrate() {
                     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
                 )
             `)
-            await db.raw('INSERT INTO transactions_new SELECT *, NULL, NULL FROM transactions')
+            await db.raw('PRAGMA foreign_keys = OFF');
+            await db.raw(`INSERT INTO transactions_new SELECT 
+                id, 
+                account_id, 
+                credit_card_id, 
+                date, 
+                description, 
+                amount, 
+                type, 
+                category, 
+                source, 
+                external_id, 
+                billing_month, 
+                null, 
+                null, 
+                created_at, 
+                updated_at FROM transactions`)
             await db.raw('DROP TABLE transactions')
             await db.raw('ALTER TABLE transactions_new RENAME TO transactions')
+            await db.raw('PRAGMA foreign_keys = ON');
         } else if (sql && !sql.includes('installment_group_id')) {
             // Already has card_payment but not installment columns
             await db.schema.table('transactions', (t) => {
