@@ -71,6 +71,25 @@ function registerDbHandlers() {
         return getKnex()('accounts').where('id', id).delete()
     })
 
+    // ── Transaction Categories ───────────────────────────────────
+    ipcMain.handle('db:transaction_categories:list', async () => {
+        return getKnex()('transaction_categories').orderBy('name')
+    })
+
+    ipcMain.handle('db:transaction_categories:create', async (_, data) => {
+        const [id] = await getKnex()('transaction_categories').insert(data)
+        const row = await getKnex()('transaction_categories').where('id', id).first()
+        return row
+    })
+
+    ipcMain.handle('db:transaction_categories:update', async (_, id, data) => {
+        return getKnex()('transaction_categories').where('id', id).update(data)
+    })
+
+    ipcMain.handle('db:transaction_categories:delete', async (_, id) => {
+        return getKnex()('transaction_categories').where('id', id).delete()
+    })
+
     // ── Credit Cards ──────────────────────────────────────────────
 
     ipcMain.handle('db:creditCards:list', async () => {

@@ -7,19 +7,39 @@ import { SaveIcon, Trash2Icon } from "lucide-react"
 import { toast } from "sonner"
 import type { Transaction } from "@/lib/transactions"
 import { parseDateToISO, formatDate } from "@/lib/transactions"
+import {
+    Combobox,
+    ComboboxInput,
+    ComboboxContent,
+    ComboboxList,
+    ComboboxItem,
+    ComboboxEmpty,
+} from "@/components/ui/combobox"
+
+import { Category } from "@/app/types/electron"
+
+// Busca todas as categorias do banco
+async function fetchCategories(): Promise<Category[]> {
+    return (await window.electronAPI?.db.transaction_categories.list()) || [];
+}
+
+// Cria uma nova categoria no banco
+async function createCategory(name: string): Promise<Category> {
+    const newCat = await window.electronAPI?.db.transaction_categories.create({ name }) as Category;
+    return newCat;
+}
 
 interface TxRowProps {
     draft: Transaction
     onChange: <K extends keyof Transaction>(field: K, value: Transaction[K]) => void
     onDelete: () => void
     deleting: boolean
-    categories?: string[]
-    datalistId?: string
 }
 
-export function TxRow({ draft, onChange, onDelete, deleting, categories = [], datalistId = "category-options" }: TxRowProps) {
+export function TxRow({ draft, onChange, onDelete, deleting }: TxRowProps) {
+
     const cellCls = "px-2 py-1.5"
-    const inputCls = "h-7 w-full rounded border border-transparent bg-transparent px-1.5 text-xs focus:border-input focus:outline-none focus:ring-1 focus:ring-ring hover:border-input/50 transition-colors"
+    const inputCls = "h-7 w-full rounded border border-transparent bg-transparent px-0 text-xs focus:border-input focus:outline-none focus:ring-1 focus:ring-ring hover:border-input/50 transition-colors"
     function formatAmount(value: number) {
         return "R$ " + value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
     }
@@ -27,6 +47,37 @@ export function TxRow({ draft, onChange, onDelete, deleting, categories = [], da
         const digits = input.replace(/\D/g, "")
         return digits ? parseInt(digits, 10) / 100 : 0
     }
+
+    // Estado para categorias
+    const [catList, setCatList] = React.useState<Category[]>([])
+    const [catInput, setCatInput] = React.useState("")
+
+    const [localSelectedId, setLocalSelectedId] = React.useState<string | null>(
+        draft.category_id ? String(draft.category_id) : null
+    )
+
+    // Carrega categorias do banco ao montar
+    React.useEffect(() => {
+        fetchCategories().then(setCatList)
+    }, [])
+
+    // keep localSelectedId and catInput in sync with parent draft and loaded list
+    React.useEffect(() => {
+        const idStr = draft.category_id != null ? String(draft.category_id) : null
+        setLocalSelectedId(idStr)
+        if (idStr) {
+            const match = catList.find(c => String(c.id) === idStr)
+            if (match) setCatInput(match.name)
+        }
+    }, [draft.category_id, catList])
+
+    function onInput({ target }: any) {
+        setCatInput(target.value)
+    }
+
+    const selectedItem = React.useMemo(() => {
+        return catList.find(c => String(c.id) === localSelectedId) ?? null
+    }, [catList, localSelectedId])
 
     return (
         <tr className="border-b last:border-0 hover:bg-muted/20 group">
@@ -71,17 +122,46 @@ export function TxRow({ draft, onChange, onDelete, deleting, categories = [], da
                 </button>
             </td>
             <td className={cellCls}>
-                {categories && categories.length > 0 ? (
-                    <select value={draft.category ?? ""} onChange={(e) => onChange("category", (e.target.value || null) as any)} className={`${inputCls} w-[120px]`}>
-                        <option value="">—</option>
-                        {categories.map((c) => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                ) : (
-                    <>
-                        <input list={datalistId} type="text" value={draft.category ?? ""} onChange={(e) => onChange("category", e.target.value as any)} placeholder="Categoria…" className={`${inputCls} w-[120px]`} />
-                        <datalist id={datalistId}>{categories.map((c) => <option key={c} value={c} />)}</datalist>
-                    </>
-                )}
+                <Combobox
+                    items={catList}
+                    inputValue={catInput}
+                    onInputValueChange={setCatInput}
+                    value={selectedItem}
+                    onValueChange={(val: any) => {
+                        const id = val ? val.id : null
+                        setLocalSelectedId(id != null ? String(id) : null)
+                        onChange("category_id", id as any)
+                    }}
+                    itemToStringLabel={(it: any) => (it ? it.name : "")}
+                >
+                    <ComboboxInput className={inputCls} placeholder="Select a framework" />
+                    <ComboboxContent>
+                        <ComboboxList>
+                            {(item) => (
+                                <ComboboxItem key={item.id} value={item}>
+                                    {item.name}
+                                </ComboboxItem>
+                            )}
+                        </ComboboxList>
+                        {catInput && (
+                            <ComboboxEmpty>
+                                <button
+                                    className="w-full text-left px-2 py-1 text-primary"
+                                    onMouseDown={async e => {
+                                        e.preventDefault()
+                                        const newCat = await createCategory(catInput)
+                                        setCatList(list => [...list, newCat])
+                                        setLocalSelectedId(String(newCat.id));
+                                        onChange("category_id", newCat.id as any)
+                                        setCatInput(newCat.name)
+                                    }}
+                                >
+                                    Criar nova categoria: <b>{catInput}</b>
+                                </button>
+                            </ComboboxEmpty>
+                        )}
+                    </ComboboxContent>
+                </Combobox>
             </td>
             {/** billing_month is optional depending on context (cards show it, accounts hide it) */}
             {/** billing_month is shown only for credit-card transactions (credit_card_id present) */}
@@ -104,11 +184,9 @@ interface MonthRowsProps {
     drafts: Record<number, Transaction>
     onDraftChange: <K extends keyof Transaction>(id: number, field: K, value: Transaction[K]) => void
     onSaved: (updatedIds?: number[], deletedId?: number) => void
-    categories?: string[]
-    datalistId?: string
     colSpan?: number
 }
-export function MonthRows({ transactions, drafts, onDraftChange, onSaved, categories = [], datalistId = "category-options", colSpan = 7 }: MonthRowsProps) {
+export function MonthRows({ transactions, drafts, onDraftChange, onSaved, colSpan = 7 }: MonthRowsProps) {
     const [saving, setSaving] = React.useState(false)
     const [deletingId, setDeletingId] = React.useState<number | null>(null)
 
@@ -131,7 +209,7 @@ export function MonthRows({ transactions, drafts, onDraftChange, onSaved, catego
                     description: drafts[t.id!].description,
                     amount: drafts[t.id!].amount,
                     type: drafts[t.id!].type,
-                    category: drafts[t.id!].category,
+                    category_id: drafts[t.id!].category_id,
                     billing_month: drafts[t.id!].billing_month,
                 })
             ))
@@ -162,7 +240,7 @@ export function MonthRows({ transactions, drafts, onDraftChange, onSaved, catego
     return (
         <>
             {sorted.map(tx => (
-                <TxRow key={tx.id} draft={drafts[tx.id!] ?? tx} onChange={(field, value) => onDraftChange(tx.id!, field, value)} onDelete={() => handleDelete(tx.id!)} deleting={deletingId === tx.id} categories={categories} datalistId={datalistId} />
+                <TxRow key={tx.id} draft={drafts[tx.id!] ?? tx} onChange={(field, value) => onDraftChange(tx.id!, field, value)} onDelete={() => handleDelete(tx.id!)} deleting={deletingId === tx.id} />
             ))}
             {dirtyEntries.length > 0 && (
                 <tr className="bg-primary/5 border-t">

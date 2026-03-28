@@ -59,6 +59,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
       delete: (id) => ipcRenderer.invoke('db:subscriptions:delete', id),
       detect: () => ipcRenderer.invoke('db:subscriptions:detect'),
     },
+    transaction_categories: {
+      list: () => ipcRenderer.invoke('db:transaction_categories:list'),
+      create: (data) => ipcRenderer.invoke('db:transaction_categories:create', data),
+      update: (id, data) => ipcRenderer.invoke('db:transaction_categories:update', id, data),
+      delete: (id) => ipcRenderer.invoke('db:transaction_categories:delete', id),
+    },
     installmentGroups: {
       list: (filters) => ipcRenderer.invoke('db:installmentGroups:list', filters),
       insert: (data) => ipcRenderer.invoke('db:installmentGroups:insert', data),

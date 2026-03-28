@@ -9,6 +9,7 @@ export interface Transaction {
   category?: string
   source?: 'manual' | 'csv' | 'ofx'
   external_id?: string
+  category_id?: number | null
   billing_month?: string | null
   installment_group_id?: number | null
   installment_number?: number | null
@@ -80,6 +81,11 @@ export interface RecurringTransaction {
   max_amount: number
   first_date: string
   last_date: string
+}
+
+export interface Category {
+  id: number | string
+  name: string
 }
 
 export interface Subscription {
@@ -156,6 +162,12 @@ export interface ElectronAPI {
       update: (id: number, data: Partial<Subscription>) => Promise<number>
       delete: (id: number) => Promise<number>
       detect: () => Promise<RecurringTransaction[]>
+    }
+    transaction_categories: {
+      list: () => Promise<Category[]>
+      create: (data: { name: string; color?: string | null; icon?: string | null; type?: string | null; parent_id?: number | null }) => Promise<Category>
+      update: (id: number, data: Partial<{ name: string; color?: string | null; icon?: string | null; type?: string | null; parent_id?: number | null }>) => Promise<number>
+      delete: (id: number) => Promise<number>
     }
     installmentGroups: {
       list: (filters?: InstallmentGroupFilters) => Promise<InstallmentGroup[]>

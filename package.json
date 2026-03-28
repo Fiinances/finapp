@@ -15,6 +15,7 @@
     "postinstall": "electron-rebuild -f -w better-sqlite3"
   },
   "dependencies": {
+    "@base-ui/react": "^1.3.0",
     "@mediapipe/tasks-genai": "^0.10.26",
     "@mlc-ai/web-llm": "^0.2.81",
     "@radix-ui/react-avatar": "^1.1.10",

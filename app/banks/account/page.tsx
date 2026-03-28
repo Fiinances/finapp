@@ -433,7 +433,6 @@ function AccountDetailPage() {
                                                                         drafts={drafts}
                                                                         onDraftChange={handleDraftChange}
                                                                         onSaved={handleMonthRowsSaved}
-                                                                        categories={CATEGORIES}
                                                                     />
                                                                 </tbody>
                                                             </table>
