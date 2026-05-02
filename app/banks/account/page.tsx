@@ -15,27 +15,22 @@ import { CreditCardFaturaChart } from "@/app/dashboard/components/CreditCardFatu
 import { AccountSubscriptionsCalendar } from "@/app/dashboard/components/AccountSubscriptionsCalendar"
 import { Suspense } from "react"
 import type { Account, Transaction, CreditCard } from "@/app/types/electron"
-
-const CATEGORIES = [
-    "Alimentação", "Transporte", "Moradia", "Saúde", "Educação",
-    "Lazer", "Vestuário", "Salário", "Investimento", "Transferência", "Boleto", "Outros",
-]
-
+import { useDispatch, useSelector } from "react-redux"
 import { buildSummaries, txBillingMonth, MonthSummary } from "@/lib/transactions"
-
+import { RootState } from "@/app/store"
+import { addCategories } from "@/app/features/categories/category"
 
 function fmt(value: number) {
     return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
 }
-
-
 // ── Page ─────────────────────────────────────────────────────────
 
 function AccountDetailPage() {
     const router = useRouter()
     const searchParams = useSearchParams()
-    const accountId = parseInt(searchParams.get("id") ?? "0", 10)
+    const dispatch = useDispatch()
 
+    const accountId = parseInt(searchParams.get("id") ?? "0", 10)
     const [account, setAccount] = React.useState<Account | null>(null)
     const [summaries, setSummaries] = React.useState<MonthSummary[]>([])
     const [drafts, setDrafts] = React.useState<Record<number, Transaction>>({})
@@ -65,15 +60,18 @@ function AccountDetailPage() {
         if (!accountId) return
         setLoading(true)
         try {
-            const [accounts, accountTxns, allCards] = await Promise.all([
+            const [accounts, accountTxns, allCards, categories] = await Promise.all([
                 window.electronAPI?.db.accounts.list() ?? [],
                 window.electronAPI?.db.transactions.list({ accountId }) ?? [],
                 window.electronAPI?.db.creditCards.list() ?? [],
+                window.electronAPI?.db.transaction_categories.list() || []
             ])
             const found = (accounts ?? []).find((a) => a.id === accountId) ?? null
             setAccount(found)
             const txns = accountTxns ?? []
             setSummaries(buildSummaries(txns))
+            dispatch(addCategories(categories))
+
             setDrafts(Object.fromEntries(txns.filter(t => t.id != null).map(t => [t.id!, { ...t }])))
 
             const linked = (allCards ?? []).filter((c) => c.account_id === accountId)

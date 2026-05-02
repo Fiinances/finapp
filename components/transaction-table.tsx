@@ -17,17 +17,11 @@ import {
 } from "@/components/ui/combobox"
 
 import { Category } from "@/app/types/electron"
+import { useDispatch, useSelector } from "react-redux"
+import { RootState } from "@/app/store"
+import { addCategory } from "@/app/features/categories/category"
 
-// Busca todas as categorias do banco
-async function fetchCategories(): Promise<Category[]> {
-    return (await window.electronAPI?.db.transaction_categories.list()) || [];
-}
 
-// Cria uma nova categoria no banco
-async function createCategory(name: string): Promise<Category> {
-    const newCat = await window.electronAPI?.db.transaction_categories.create({ name }) as Category;
-    return newCat;
-}
 
 interface TxRowProps {
     draft: Transaction
@@ -48,18 +42,20 @@ export function TxRow({ draft, onChange, onDelete, deleting }: TxRowProps) {
         return digits ? parseInt(digits, 10) / 100 : 0
     }
 
+    async function createCategory(name: string): Promise<Category> {
+        const newCat = await window.electronAPI?.db.transaction_categories.create({ name }) as Category;
+        return newCat;
+    }
+
+    const catList = useSelector((state: RootState) => state.categories.categories)
+    const dispatch = useDispatch()
+
     // Estado para categorias
-    const [catList, setCatList] = React.useState<Category[]>([])
     const [catInput, setCatInput] = React.useState("")
 
     const [localSelectedId, setLocalSelectedId] = React.useState<string | null>(
         draft.category_id ? String(draft.category_id) : null
     )
-
-    // Carrega categorias do banco ao montar
-    React.useEffect(() => {
-        fetchCategories().then(setCatList)
-    }, [])
 
     // keep localSelectedId and catInput in sync with parent draft and loaded list
     React.useEffect(() => {
@@ -70,10 +66,6 @@ export function TxRow({ draft, onChange, onDelete, deleting }: TxRowProps) {
             if (match) setCatInput(match.name)
         }
     }, [draft.category_id, catList])
-
-    function onInput({ target }: any) {
-        setCatInput(target.value)
-    }
 
     const selectedItem = React.useMemo(() => {
         return catList.find(c => String(c.id) === localSelectedId) ?? null
@@ -134,7 +126,7 @@ export function TxRow({ draft, onChange, onDelete, deleting }: TxRowProps) {
                     }}
                     itemToStringLabel={(it: any) => (it ? it.name : "")}
                 >
-                    <ComboboxInput className={inputCls} placeholder="Select a framework" />
+                    <ComboboxInput className={inputCls} placeholder="selecione uma categoria" />
                     <ComboboxContent>
                         <ComboboxList>
                             {(item) => (
@@ -150,7 +142,7 @@ export function TxRow({ draft, onChange, onDelete, deleting }: TxRowProps) {
                                     onMouseDown={async e => {
                                         e.preventDefault()
                                         const newCat = await createCategory(catInput)
-                                        setCatList(list => [...list, newCat])
+                                        dispatch(addCategory(newCat))
                                         setLocalSelectedId(String(newCat.id));
                                         onChange("category_id", newCat.id as any)
                                         setCatInput(newCat.name)
@@ -163,8 +155,6 @@ export function TxRow({ draft, onChange, onDelete, deleting }: TxRowProps) {
                     </ComboboxContent>
                 </Combobox>
             </td>
-            {/** billing_month is optional depending on context (cards show it, accounts hide it) */}
-            {/** billing_month is shown only for credit-card transactions (credit_card_id present) */}
             {(draft as any).credit_card_id != null && (
                 <td className={cellCls}>
                     <MonthPicker value={draft.billing_month ?? ""} onChange={(v) => onChange("billing_month", (v || null) as any)} className={`${inputCls} w-[90px]`} />
